@@ -2,9 +2,9 @@
 
 ## The Problem
 
-NBA 2K franchise mode has a genuine depth problem for serious players. The game gives you all the tools of a real GM — trades, signings, extensions, draft picks, cap management — but zero feedback on whether your decisions are actually good.
+NBA 2K2k MyLeague / franchise gives you all the tools of a real GM — trades, signings, extensions, draft picks, cap management — but zero feedback on whether your decisions are actually good.
 
-You can trade away a first-round pick for a player on a max contract with two years left and the game will let you do it without blinking. There's no mechanism that tells you: *this is an overpay, 28 out of 30 real GMs would reject this, and your cap situation in year three is going to collapse.*
+You can trade away a first-round pick for a player on a max contract with two years left and the game will let you do it without blinking (espeically with trade override). There's no mechanism that tells you: *this is an overpay, 28 out of 30 real GMs would reject this, and your cap situation in year three is going to collapse.*
 
 The gap: **franchise players want to feel like real GMs, but the game doesn't simulate the accountability that real GMs face.**
 
@@ -25,13 +25,13 @@ The insight was that AI could simulate all four of those accountability mechanis
 
 ## The Solution
 
-A GM grader that takes free-text notes (exactly how a real decision-maker thinks, not a dropdown menu) and returns structured accountability:
+The 2k2k GM grader tool takes free-text notes and returns structured accountability:
 
 1. **Realism grade** — would this trade actually happen in the real NBA?
-2. **GM decision grade** — separate from realism: is this smart for your franchise even if it's real?
-3. **Insider reactions** — randomized pool of real journalists, both team-beat and league-wide
+2. **GM decision grade** — is this smart for your franchise?
+3. **Insider reactions** — reactions from a randomized pool of real journalists, both team-beat and league-wide
 4. **Cap implications** — the financial logic, not just the headline
-5. **Org consultation** — your franchise's own legends and executives weighing in before you pull the trigger
+5. **Org consultation** — consult your own franchise's own legends and executives weighing in before you pull the trigger
 
 The key UX decision was **free text input**. No dropdowns, no forms, no structured fields. You write exactly how you'd describe the move to a friend. The AI figures out the rest.
 
@@ -39,20 +39,19 @@ The key UX decision was **free text input**. No dropdowns, no forms, no structur
 
 ## Target User
 
-A franchise mode player who:
+A MyLeague / franchise mode player who:
 - Takes the GM simulation seriously, not just the on-court game
 - Has opinions about real NBA transactions and wants to apply that lens to their game
-- Is frustrated that the game treats a terrible trade the same as a great one
 - Wants the *feeling* of running a real front office, not just clicking through menus
 
-This is not a casual player. It's the person who spends 45 minutes in the trade negotiation screen, reads cap analysis, and has a genuine opinion about whether a deal makes sense.
+This is not for casual players. It's the person who spends 45 minutes in the trade negotiation screen, reads cap analysis, and has a genuine opinion about whether a deal makes sense.
 
 ---
 
 ## Key Product Decisions
 
 **Free text instead of structured input**
-The alternative was a form: pick move type, enter player names, select contract years. Rejected because it breaks the immersion. Real GMs don't think in dropdowns. The grader had to feel like talking to a scout, not filling out a form.
+The alternative was a form: pick move type, enter player names, select contract years. Rejected because it breaks the immersion. Real GMs don't think in dropdowns or boxed cages. The grader had to feel like talking to a scout, not filling out a form.
 
 **Strict grading rubric**
 Early versions graded almost everything A or B. That made the tool useless — if every move is good, there's no accountability. The final prompt explicitly calibrates: most moves are B or C, A-range is reserved for genuinely franchise-altering decisions. The grade has to mean something.
@@ -70,7 +69,7 @@ A technical decision with a product rationale. Claude's natural language (apostr
 The storage limitation (window.storage resets per URL) could have been a dealbreaker. Instead it became a feature framing: each sync code is a separate save file, one per team. Multiple sync codes = multiple franchise runs you can jump between. The constraint became part of the product logic.
 
 **30-team org voice pools**
-The Bulls-specific version was functional but limited the audience to Bulls fans. Expanding to all 30 teams required curating 10-12 historically significant figures per franchise — front office builders, championship coaches, and franchise legends — with enough specificity that the voices feel authentic, not generic.
+We started with a Bulls-specific version (which was functional) but it limits the audience to Bulls fans like me. Expanding to all 30 teams required curating 10-12 historically significant figures per franchise — front office builders, championship coaches, and franchise legends — with enough specificity that the voices feel authentic, not generic.
 
 ---
 
@@ -92,12 +91,3 @@ The Bulls-specific version was functional but limited the audience to Bulls fans
 - When to use JSON vs. delimiters based on output reliability
 - When to simplify UX (two options, not three) based on actual user behavior
 - When a technical limitation is actually a product opportunity
-
----
-
-## What I'd Build Next
-
-- **Trade simulator** — propose a trade and see if the other team would actually accept it, modeled on real team needs and cap situations
-- **Season recap** — after 82 games, grade the full GM season based on moves made vs. outcomes
-- **Multi-user mode** — two players running rival franchises, with shared trade history and insider reactions covering both sides
-- **Real-time player valuations** — pulling live NBA data to ground the tier assessments in current performance, not hardcoded assumptions
