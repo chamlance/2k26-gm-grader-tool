@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2k26 GM Grader Tool</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --nba:#1D428A;--nba-light:#e8edf7;--red:#C8102E;--red-light:#fce8eb;
+  --bg:#ffffff;--surface:#F7F8FA;--surface2:#EFF1F5;--bd:#E2E5EC;--bd2:#CFD3DC;
+  --tx:#0A0A0F;--tx2:#3A3D4A;--mu:#717485;--mu2:#A0A4B4;
+  --gold:#B8860B;--gold-light:#FFF8E7;--green:#15803D;
+  --orange:#C05C00;--orange-light:#FFF3E8;--err:#C8102E;--err-light:#FEF2F4;
+}
+body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;-webkit-font-smoothing:antialiased;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:#f0f0f0;}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px;}
+.topbar{background:var(--nba);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:10;}
+.topbar-left{display:flex;align-items:center;gap:14px;}
+.nba-badge{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.55);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:4px;padding:3px 9px;}
+.topbar-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:#fff;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.topbar-chip{display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;padding:4px 10px;border-radius:4px;border:1px solid;letter-spacing:0.04em;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.topbar-chip.sync{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:rgba(255,255,255,0.85);}
+.topbar-chip.sync:hover{background:rgba(255,255,255,0.18);color:#fff;}
+.status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.wrap{max-width:900px;margin:0 auto;padding:28px 20px 80px;}
+.sec-hdr{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;gap:12px;}
+.sec-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;letter-spacing:0.02em;text-transform:uppercase;color:var(--tx);line-height:1;}
+.sec-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mu);letter-spacing:0.06em;text-transform:uppercase;margin-top:3px;}
+.grade-hdr{text-align:right;}
+.grade-hdr-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--mu);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;}
+.tabs{display:flex;border-bottom:2px solid var(--bd);margin-bottom:24px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.tab{font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;padding:10px 18px;background:none;border:none;border-bottom:3px solid transparent;color:var(--mu);cursor:pointer;transition:all 0.15s;margin-bottom:-2px;white-space:nowrap;letter-spacing:0.01em;}
+.tab.on{color:var(--nba);border-bottom-color:var(--nba);}
+.tab:hover:not(.on){color:var(--tx2);}
+.card{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:18px;}
+.card-shadow{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.clabel{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;}
+.card p{font-size:13px;color:var(--tx2);line-height:1.8;}
+.input-area{display:flex;flex-direction:column;gap:14px;}
+.fl{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:7px;}
+textarea{font-family:'Barlow',sans-serif;font-size:14px;line-height:1.75;color:var(--tx);background:var(--bg);border:1.5px solid var(--bd2);border-radius:8px;padding:14px;width:100%;resize:vertical;transition:border-color 0.15s;}
+textarea:focus{outline:none;border-color:var(--nba);}
+textarea::placeholder{color:var(--mu2);font-style:italic;font-size:13px;}
+.hint{font-size:12px;color:var(--mu);line-height:1.7;padding:11px 14px;background:var(--nba-light);border:1px solid rgba(29,66,138,0.15);border-radius:8px;}
+.srow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.sbtn{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;background:var(--nba);color:#fff;border:none;border-radius:7px;padding:11px 28px;cursor:pointer;transition:opacity 0.15s;}
+.sbtn:disabled{opacity:0.35;cursor:default;}
+.pulsing{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mu);animation:pulse 1.5s infinite;}
+.errmsg{font-size:13px;color:var(--err);padding:10px 14px;background:var(--err-light);border:1px solid rgba(200,16,46,0.18);border-radius:7px;}
+.warn-box{font-size:12px;color:var(--orange);padding:10px 14px;background:var(--orange-light);border:1px solid rgba(192,92,0,0.2);border-radius:7px;}
+.result{display:flex;flex-direction:column;gap:14px;animation:fadeUp 0.3s ease;}
+.mtag{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--red);font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;display:inline-block;background:var(--red-light);padding:3px 8px;border-radius:4px;}
+.vcard{background:var(--nba);border-radius:10px;padding:18px;}
+.vcard .clabel{color:rgba(255,255,255,0.55);}
+.vtext{font-size:17px;font-weight:700;color:#fff;line-height:1.4;font-family:'Barlow',sans-serif;}
+.grow{display:flex;gap:12px;}
+.gbox{background:var(--surface);border:1.5px solid var(--bd);border-radius:10px;padding:18px 14px;text-align:center;flex:1;}
+.gval{font-family:'Barlow Condensed',sans-serif;font-size:54px;font-weight:800;line-height:1;margin-top:6px;letter-spacing:-0.01em;}
+.tcol{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.capcard{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:18px;}
+.caplabel{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;}
+.capcard p{font-size:13px;color:var(--tx2);line-height:1.8;}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.rgl{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:0.04em;}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.icard{background:var(--surface);border:1px solid var(--bd);border-left:3px solid;border-radius:0 8px 8px 0;padding:11px 13px;margin-bottom:7px;}
+.iwho{display:flex;gap:8px;align-items:baseline;margin-bottom:3px;}
+.iname{font-weight:700;font-size:13px;color:var(--tx);}
+.ipub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mu);}
+.iq{font-size:13px;color:var(--tx2);line-height:1.7;font-style:italic;}
+.ractions{display:flex;gap:8px;flex-wrap:wrap;}
+.gbtn{font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;background:none;border:1.5px solid var(--bd2);color:var(--mu);border-radius:7px;padding:8px 15px;cursor:pointer;transition:all 0.15s;}
+.gbtn:hover{border-color:var(--nba);color:var(--nba);}
+.gbtn.danger:hover{border-color:rgba(200,16,46,0.4);color:var(--red);}
+.gbtn.conf{border-color:rgba(200,16,46,0.4)!important;color:var(--red)!important;}
+.ai-summary{background:var(--nba);border-radius:10px;padding:20px;margin-bottom:16px;animation:fadeUp 0.3s ease;}
+.ai-summary-label{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.ai-summary-text{font-size:14px;color:#fff;line-height:1.8;font-weight:400;}
+.ai-summary-loading{font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(255,255,255,0.5);animation:pulse 1.5s infinite;}
+.ai-summary-stale{font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(255,255,255,0.4);margin-top:8px;}
+.log{display:flex;flex-direction:column;gap:8px;animation:fadeUp 0.3s ease;}
+.lsummary{background:var(--surface);border:1px solid var(--bd);border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px;}
+.lstats{display:flex;gap:16px;flex-wrap:wrap;}
+.lstat{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mu);}
+.lstat span{color:var(--tx);margin-left:4px;}
+.litem{background:var(--bg);border:1.5px solid var(--bd);border-radius:10px;padding:14px;cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;}
+.litem:hover,.litem.active{border-color:var(--nba);box-shadow:0 0 0 3px rgba(29,66,138,0.08);}
+.litop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.lmeta{display:flex;gap:7px;align-items:center;margin-bottom:5px;flex-wrap:wrap;}
+.ltype{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--red);font-weight:600;text-transform:uppercase;letter-spacing:0.07em;background:var(--red-light);padding:2px 7px;border-radius:3px;}
+.lts{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mu2);}
+.lnotes{font-size:13px;color:var(--tx2);line-height:1.5;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.lverdict{font-size:12px;color:var(--mu);font-style:italic;margin-top:4px;font-weight:500;}
+.lright{display:flex;gap:8px;flex-shrink:0;align-items:flex-start;}
+.lgrades{display:flex;gap:7px;}
+.gml{font-size:10px;color:var(--mu);margin-bottom:3px;text-align:center;font-family:'IBM Plex Mono',monospace;}
+.delbtn{font-family:'IBM Plex Mono',monospace;font-size:11px;background:none;border:1.5px solid var(--bd2);color:var(--mu2);border-radius:5px;padding:3px 8px;cursor:pointer;transition:all 0.15s;}
+.delbtn:hover,.delbtn.conf{border-color:rgba(200,16,46,0.35);color:var(--red);}
+.lfooter{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);flex-wrap:wrap;gap:8px;}
+.lbtn{font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;background:none;border:1.5px solid var(--bd2);color:var(--mu);border-radius:7px;padding:7px 13px;cursor:pointer;transition:all 0.15s;}
+.lbtn:hover{border-color:var(--nba);color:var(--nba);}
+.ibox{background:var(--surface);border:1px solid var(--bd);border-radius:8px;padding:13px;margin-top:4px;}
+.rums{display:flex;flex-direction:column;gap:12px;animation:fadeUp 0.3s ease;}
+.rumhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
+.rumbadge{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6D28D9;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;padding:2px 8px;background:#F5F3FF;border:1px solid rgba(109,40,217,0.22);border-radius:4px;}
+.rumitem{background:var(--bg);border:1.5px solid var(--bd);border-left:3px solid #7C3AED;border-radius:0 10px 10px 0;padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.rumtext{font-size:13px;color:var(--tx2);line-height:1.75;font-style:italic;flex:1;}
+.pr{display:flex;flex-direction:column;gap:0;animation:fadeUp 0.3s ease;}
+.pr-hdr{background:var(--nba);border-radius:10px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:12px;}
+.pr-hl{display:flex;flex-direction:column;gap:3px;}
+.pr-htitle{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:0.03em;text-transform:uppercase;color:#fff;}
+.pr-hsub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(255,255,255,0.5);}
+.pr-rbadge{display:flex;align-items:center;gap:14px;}
+.pr-rnum{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:800;color:#fff;line-height:1;}
+.pr-rlabel{font-family:'IBM Plex Mono',monospace;font-size:9px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.1em;}
+.pr-rdelta{font-size:13px;font-weight:700;margin-top:3px;}
+.pr-thead{display:grid;grid-template-columns:48px 30px 1fr 36px 56px;gap:0;background:var(--surface2);padding:8px 16px;border-radius:8px 8px 0 0;border:1px solid var(--bd);}
+.pr-th{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--mu);text-transform:uppercase;letter-spacing:0.08em;}
+.pr-body{border:1px solid var(--bd);border-top:none;border-radius:0 0 10px 10px;overflow:hidden;}
+.pr-row{display:grid;grid-template-columns:48px 30px 1fr 36px 56px;gap:0;padding:11px 16px;border-bottom:1px solid var(--bd);align-items:center;background:var(--bg);transition:background 0.1s;}
+.pr-row:hover{background:var(--surface);}
+.pr-row.ur{background:rgba(29,66,138,0.05);border-left:3px solid var(--nba);padding-left:13px;}
+.pr-row:last-child{border-bottom:none;}
+.pr-rank-n{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--mu);}
+.pr-rank-n.t3{color:var(--gold);}
+.pr-rank-n.u{color:var(--nba);}
+.pr-dt{font-size:11px;font-weight:700;text-align:center;}
+.pr-gm{display:flex;flex-direction:column;gap:2px;}
+.pr-gmn{font-size:13px;font-weight:700;color:var(--tx);}
+.pr-gmn.u{color:var(--nba);}
+.pr-gmt{font-size:11px;color:var(--mu);}
+.pr-press{display:flex;gap:2px;align-items:center;}
+.prdot{width:5px;height:5px;border-radius:50%;}
+.pr-g{text-align:right;}
+.pill{font-family:'IBM Plex Mono',monospace;font-weight:600;border-radius:5px;border:1.5px solid;display:inline-block;line-height:1.3;}
+.pill-sm{font-size:13px;padding:2px 9px;}
+.pill-lg{font-size:28px;padding:4px 14px;line-height:1.15;}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:flex-start;justify-content:center;z-index:100;padding:20px;overflow-y:auto;}
+.md{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:24px;width:100%;max-width:520px;display:flex;flex-direction:column;gap:14px;box-shadow:0 8px 32px rgba(0,0,0,0.12);margin:auto;max-height:calc(100vh - 40px);overflow-y:auto;}
+.md-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;text-transform:uppercase;color:var(--tx);}
+.md-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.md-btn{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;background:var(--nba);color:#fff;border:none;border-radius:7px;padding:10px 20px;cursor:pointer;}
+.md-btn.sec{background:none;border:1.5px solid var(--bd2);color:var(--mu);font-weight:600;font-family:'Barlow',sans-serif;font-size:13px;letter-spacing:0;text-transform:none;}
+.md-sep{border:none;border-top:1px solid var(--bd);margin:0;}
+.empty-state{text-align:center;padding:60px 20px;color:var(--mu);font-size:13px;}
+@media(max-width:640px){
+  .mo{padding:12px;}.md{padding:18px;gap:12px;border-radius:10px;}
+  .wrap{padding:16px 14px 80px;}
+  .tcol,.grow,.rgrid{display:flex;flex-direction:column;}
+  .topbar{height:auto;padding:10px 14px;flex-wrap:wrap;gap:8px;}
+  .topbar-left{gap:8px;}.topbar-title{font-size:15px;}
+  .nba-badge{font-size:11px;padding:2px 7px;}
+  .topbar-right{width:100%;justify-content:flex-start;gap:6px;}
+  .topbar-chip{font-size:9px;padding:3px 8px;}
+  .sec-hdr{flex-direction:column;align-items:flex-start;gap:8px;}
+  .sec-title{font-size:22px;}.grade-hdr{text-align:left;}
+  .tab{font-size:11px;padding:8px 12px;}
+  .card,.card-shadow,.capcard,.ai-summary{padding:14px;}
+  .gbox{padding:14px 10px;}.gval{font-size:42px;}.vtext{font-size:14px;}
+  .rgrid{gap:12px;}.litem{padding:12px;}
+  .litop{flex-direction:column;gap:8px;}
+  .lright{flex-direction:row;justify-content:space-between;width:100%;}
+  .lgrades{gap:12px;}
+  .pr-thead,.pr-row{grid-template-columns:34px 22px 1fr 0px 44px;}
+  .pr-th:nth-child(4),.pr-row>div:nth-child(4){display:none;}
+  .pr-hdr{padding:14px;}.pr-rnum{font-size:32px;}
+  .md-title{font-size:18px;}
+  .sbtn{width:100%;text-align:center;}
+  .srow{flex-direction:column;align-items:stretch;}
+  .ractions{flex-direction:column;}.gbtn{text-align:center;}
+  .lfooter{flex-direction:column;gap:10px;}.pill-sm{font-size:11px;}
+}
+.consult{display:flex;flex-direction:column;gap:14px;animation:fadeUp 0.3s ease;}
+.consult-card{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:16px;display:flex;gap:14px;align-items:flex-start;}
+.consult-avatar{width:40px;height:40px;border-radius:50%;background:var(--surface2);border:1.5px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.consult-body{flex:1;min-width:0;}
+.consult-who{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;flex-wrap:wrap;}
+.consult-name{font-size:13px;font-weight:700;color:var(--tx);}
+.consult-role{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mu);}
+.consult-quote{font-size:13px;color:var(--tx2);line-height:1.75;font-style:italic;}
+.consult-verdict{background:var(--nba);border-radius:10px;padding:18px;}
+.consult-verdict-label{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.consult-verdict-text{font-size:16px;font-weight:700;color:#fff;line-height:1.4;}
+.consult-push{display:flex;align-items:center;gap:10px;margin-top:12px;}
+.push-yes{background:#15803D;color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.05em;padding:8px 18px;border-radius:7px;}
+.push-no{background:#C8102E;color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.05em;padding:8px 18px;border-radius:7px;}
+.push-mixed{background:#C05C00;color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.05em;padding:8px 18px;border-radius:7px;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const {useState,useEffect,useRef,useCallback,useMemo,createElement:h,Fragment}=React;
+const STORAGE_KEY="gmgrader-v5-moves";
+const RUMOR_KEY="gmgrader-v5-rumors";
+const GMSUMM_KEY="gmgrader-v5-gmsumm";
+const RUMSUMM_KEY="gmgrader-v5-rumsumm";
+const NBA_BLUE="#1D428A";
+const NBA_RED="#C8102E";
+
+const LEAGUE_GMS=[
+  {name:"Sam Presti",title:"GM",team:"Oklahoma City Thunder",score:97,articles:94},
+  {name:"Brad Stevens",title:"President",team:"Boston Celtics",score:95,articles:91},
+  {name:"Masai Ujiri",title:"President",team:"Toronto Raptors",score:92,articles:87},
+  {name:"Pat Riley",title:"President",team:"Miami Heat",score:91,articles:89},
+  {name:"Zach Kleiman",title:"President",team:"Memphis Grizzlies",score:89,articles:73},
+  {name:"Tim Connelly",title:"President",team:"Minnesota Timberwolves",score:87,articles:71},
+  {name:"Daryl Morey",title:"President",team:"Philadelphia 76ers",score:86,articles:90},
+  {name:"Mike Dunleavy Jr.",title:"GM",team:"Golden State Warriors",score:85,articles:76},
+  {name:"Leon Rose",title:"President",team:"New York Knicks",score:84,articles:83},
+  {name:"Calvin Booth",title:"GM",team:"Denver Nuggets",score:83,articles:65},
+  {name:"Koby Altman",title:"President",team:"Cleveland Cavaliers",score:82,articles:68},
+  {name:"Lawrence Frank",title:"President",team:"LA Clippers",score:81,articles:62},
+  {name:"Nico Harrison",title:"GM",team:"Dallas Mavericks",score:80,articles:72},
+  {name:"Monte McNair",title:"GM",team:"Sacramento Kings",score:79,articles:63},
+  {name:"Joe Cronin",title:"President",team:"Portland Trail Blazers",score:78,articles:58},
+  {name:"Rafael Stone",title:"GM",team:"Houston Rockets",score:77,articles:62},
+  {name:"Jeff Weltman",title:"President",team:"Orlando Magic",score:76,articles:55},
+  {name:"Jon Horst",title:"GM",team:"Milwaukee Bucks",score:75,articles:68},
+  {name:"Rob Pelinka",title:"VP & GM",team:"Los Angeles Lakers",score:74,articles:85},
+  {name:"Justin Zanik",title:"GM",team:"Utah Jazz",score:73,articles:52},
+  {name:"Mitch Kupchak",title:"GM",team:"Charlotte Hornets",score:72,articles:64},
+  {name:"Landry Fields",title:"GM",team:"Atlanta Hawks",score:71,articles:59},
+  {name:"Trajan Langdon",title:"President",team:"Detroit Pistons",score:70,articles:56},
+  {name:"Sean Marks",title:"GM",team:"Brooklyn Nets",score:69,articles:70},
+  {name:"Swin Cash",title:"VP Ops",team:"New Orleans Pelicans",score:68,articles:57},
+  {name:"Chad Buchanan",title:"GM",team:"Indiana Pacers",score:67,articles:51},
+  {name:"Michael Winger",title:"President",team:"Washington Wizards",score:66,articles:49},
+  {name:"James Jones",title:"VP & GM",team:"Phoenix Suns",score:65,articles:66},
+  {name:"Brian Wright",title:"GM",team:"San Antonio Spurs",score:64,articles:47},
+];
+const BP=[
+  {n:"Adrian Wojnarowski",p:"ESPN"},{n:"Shams Charania",p:"The Athletic"},
+  {n:"Marc Stein",p:"Stein Line"},{n:"Ramona Shelburne",p:"ESPN"},
+  {n:"Tony Jones",p:"The Athletic"},{n:"Jake Fischer",p:"Yahoo Sports"},
+  {n:"Tim MacMahon",p:"ESPN"},{n:"Eric Pincus",p:"Bleacher Report"},
+  {n:"Joe Cowley",p:"Chicago Sun-Times"},{n:"K.C. Johnson",p:"NBC Sports Chicago"},
+];
+const LP=[
+  {n:"Brian Windhorst",p:"ESPN"},{n:"Chris Haynes",p:"TNT Sports"},
+  {n:"Sam Amick",p:"The Athletic"},{n:"Kevin O'Connor",p:"The Ringer"},
+  {n:"Zach Lowe",p:"ESPN"},{n:"Howard Beck",p:"Sports Illustrated"},
+  {n:"Stefan Bondy",p:"New York Post"},{n:"Sean Deveney",p:"Heavy.com"},
+  {n:"David Aldridge",p:"The Athletic"},{n:"Jonathan Givony",p:"ESPN"},
+];
+function pick(a,n){const s=[...a];for(let i=s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];}return s.slice(0,n);}
+function gc(g){if(!g)return"#999";const c=g[0];if(c==="A")return"#15803D";if(c==="B")return"#1D5FA8";if(c==="C")return"#C05C00";return"#C8102E";}
+function gbg(g){if(!g)return"#f5f5f5";const c=g[0];if(c==="A")return"#F0FAF4";if(c==="B")return"#EBF2FB";if(c==="C")return"#FFF3E8";return"#FEF2F4";}
+function s2g(s){
+  if(s==null||isNaN(s))return null;const n=Number(s);
+  if(n>=93)return"A+";if(n>=90)return"A";if(n>=87)return"A-";
+  if(n>=83)return"B+";if(n>=80)return"B";if(n>=77)return"B-";
+  if(n>=73)return"C+";if(n>=70)return"C";if(n>=67)return"C-";
+  if(n>=63)return"D+";if(n>=60)return"D";return"F";
+}
+function numAvg(moves,field="gmGrade"){
+  const sc=moves.map(m=>m.analysis?.[field]?.score).filter(s=>s!=null&&!isNaN(Number(s))).map(Number);
+  return sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):null;
+}
+function Pill({grade,size="sm"}){
+  if(!grade)return h("span",{style:{color:"#aaa",fontFamily:"IBM Plex Mono,monospace",fontSize:size==="lg"?26:13,fontWeight:600}},"—");
+  return h("span",{className:`pill pill-${size==="lg"?"lg":"sm"}`,style:{color:gc(grade),background:gbg(grade),borderColor:gc(grade)+"55"}},grade);
+}
+function pressDots(a){
+  const f=a>=90?5:a>=75?4:a>=60?3:a>=45?2:1;
+  return Array.from({length:5},(_,i)=>h("span",{key:i,className:"prdot",style:{background:i<f?"#B8860B":"#E0E0E0"}}));
+}
+const HWS=!!window.storage;
+async function wGet(k){if(!HWS)return null;try{const r=await window.storage.get(k);return r?.value?JSON.parse(r.value):null;}catch(e){return null;}}
+async function wSet(k,v){if(!HWS)return false;try{await window.storage.set(k,JSON.stringify(v));return true;}catch(e){return false;}}
+async function wDel(k){if(!HWS)return;try{await window.storage.delete(k);}catch(e){}}
+
+function encode(m,r,t){
+  try{
+    const json=JSON.stringify({m,r,t:t||null,v:3});
+    return typeof LZString!=='undefined'?LZString.compressToEncodedURIComponent(json):btoa(unescape(encodeURIComponent(json)));
+  }catch(e){return null;}
+}
+function encodeCompact(m,r){
+  try{
+    const slim={
+      m:(m||[]).map(mv=>[mv.id,mv.moveType,mv.timestamp,(mv.notes||'').slice(0,80),
+        mv.analysis?.gmGrade?.grade||'',mv.analysis?.gmGrade?.score||0,
+        mv.analysis?.tradeRealism?.grade||'',mv.analysis?.tradeRealism?.score||0,
+        mv.analysis?.verdict||'']),
+      r:(r||[]).map(ru=>[ru.id,(ru.text||'').slice(0,60),ru.timestamp]),vc:1
+    };
+    const json=JSON.stringify(slim);
+    const compressed=typeof LZString!=='undefined'?LZString.compressToEncodedURIComponent(json):btoa(unescape(encodeURIComponent(json)));
+    return 'Q'+compressed;
+  }catch(e){return null;}
+}
+function decodeCompact(s){
+  try{
+    const raw=s.slice(1);
+    let json=typeof LZString!=='undefined'?LZString.decompressFromEncodedURIComponent(raw):decodeURIComponent(escape(atob(raw)));
+    if(!json)throw 0;
+    const slim=JSON.parse(json);
+    return {
+      m:(slim.m||[]).map(([id,moveType,timestamp,notes,gg,gs,rg,rs,verdict])=>({
+        id,moveType,timestamp,notes,isCompact:true,
+        analysis:{gmGrade:{grade:gg,score:Number(gs),summary:''},tradeRealism:{grade:rg,score:Number(rs),summary:''},
+          verdict,capAnalysis:'',bullsReactions:[],otherTeamReactions:[]}
+      })),
+      r:(slim.r||[]).map(([id,text,timestamp])=>({id,text,timestamp}))
+    };
+  }catch(e){return null;}
+}
+function decode(s){
+  try{
+    const raw=s.replace(/\s+/g,'');
+    if(raw.startsWith('Q'))return decodeCompact(raw);
+    if(raw.includes('#gm:')){return decode(raw.split('#gm:')[1]||'');}
+    let json=null;
+    if(typeof LZString!=='undefined'){json=LZString.decompressFromEncodedURIComponent(raw);}
+    if(!json){try{json=decodeURIComponent(escape(atob(raw)));}catch(e){}}
+    if(!json)throw 0;
+    const d=JSON.parse(json);
+    const moves=d.m||d.moves;const rumors=d.r||d.rumors||[];
+    if(!Array.isArray(moves))throw 0;
+    return {m:moves,r:rumors,t:d.t||null};
+  }catch(e){return null;}
+}
+async function callClaude(prompt){
+  const res=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:prompt}]})
+  });
+  const d=await res.json();
+  if(d.error)throw new Error(d.error.message);
+  return d.content.filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+}
+
+
+/* ── All 30 Teams Org Voices ── */
+  const TEAM_DATA={
+    bulls:{name:"Chicago Bulls",voices:[
+      {name:"Michael Reinsdorf",role:"Chairman & CEO",emoji:"🏢",type:"fo"},
+      {name:"Jerry Reinsdorf",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"John Paxson",role:"Former VP Basketball Ops",emoji:"📋",type:"fo"},
+      {name:"Jerry Krause",role:"GM – Six Championships",emoji:"🏆",type:"fo"},
+      {name:"Rod Thorn",role:"Former GM – Drafted Jordan",emoji:"🎯",type:"fo"},
+      {name:"Phil Jackson",role:"6x Championship Coach",emoji:"🧘",type:"coach"},
+      {name:"Tom Thibodeau",role:"Former Head Coach",emoji:"📝",type:"coach"},
+      {name:"Billy Donovan",role:"Former Head Coach",emoji:"🧠",type:"coach"},
+      {name:"Michael Jordan",role:"6x Champion – GOAT",emoji:"🐐",type:"legend"},
+      {name:"Scottie Pippen",role:"6x Champion",emoji:"🌟",type:"legend"},
+      {name:"Derrick Rose",role:"2011 MVP",emoji:"🌹",type:"legend"},
+      {name:"Joakim Noah",role:"2014 DPOY",emoji:"✊",type:"legend"},
+      {name:"Luol Deng",role:"2x All-Star",emoji:"🦁",type:"legend"},
+      {name:"Horace Grant",role:"3x Champion",emoji:"🏅",type:"legend"},
+    ]},
+    celtics:{name:"Boston Celtics",voices:[
+      {name:"Wyc Grousbeck",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Brad Stevens",role:"President of Basketball Ops",emoji:"📋",type:"fo"},
+      {name:"Danny Ainge",role:"Former GM",emoji:"🎯",type:"fo"},
+      {name:"Red Auerbach",role:"Legendary GM – 9 Titles",emoji:"🏆",type:"fo"},
+      {name:"Doc Rivers",role:"Former Head Coach",emoji:"🗣️",type:"coach"},
+      {name:"Tommy Heinsohn",role:"Champion Coach & Player",emoji:"🎙️",type:"coach"},
+      {name:"Bill Russell",role:"11x Champion",emoji:"🐻",type:"legend"},
+      {name:"Larry Bird",role:"3x MVP",emoji:"🐦",type:"legend"},
+      {name:"Paul Pierce",role:"2008 Champion – The Truth",emoji:"💚",type:"legend"},
+      {name:"Kevin Garnett",role:"2008 Champion – Big Ticket",emoji:"⚡",type:"legend"},
+      {name:"John Havlicek",role:"8x Champion",emoji:"🏃",type:"legend"},
+      {name:"Bob Cousy",role:"6x Champion – Cooz",emoji:"🎩",type:"legend"},
+    ]},
+    nets:{name:"Brooklyn Nets",voices:[
+      {name:"Joe Tsai",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Sean Marks",role:"General Manager",emoji:"📋",type:"fo"},
+      {name:"Billy King",role:"Former GM",emoji:"🎯",type:"fo"},
+      {name:"Jacque Vaughn",role:"Head Coach",emoji:"🧠",type:"coach"},
+      {name:"Kenny Atkinson",role:"Former Head Coach",emoji:"📝",type:"coach"},
+      {name:"Jason Kidd",role:"HOF Point Guard",emoji:"🎲",type:"legend"},
+      {name:"Vince Carter",role:"Half-Man Half-Amazing",emoji:"🦅",type:"legend"},
+      {name:"Julius Erving",role:"ABA Legend – Dr. J",emoji:"🩺",type:"legend"},
+      {name:"Brook Lopez",role:"Franchise Cornerstone",emoji:"🌊",type:"legend"},
+      {name:"Deron Williams",role:"Former Star PG",emoji:"⚡",type:"legend"},
+    ]},
+    knicks:{name:"New York Knicks",voices:[
+      {name:"James Dolan",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Leon Rose",role:"President",emoji:"📋",type:"fo"},
+      {name:"Scott Perry",role:"Former GM",emoji:"🎯",type:"fo"},
+      {name:"Jeff Van Gundy",role:"Former Head Coach",emoji:"💬",type:"coach"},
+      {name:"Pat Riley",role:"Former Coach & President",emoji:"🕴️",type:"coach"},
+      {name:"Patrick Ewing",role:"Franchise Legend",emoji:"🗽",type:"legend"},
+      {name:"Walt Frazier",role:"2x Champion – Clyde",emoji:"🎩",type:"legend"},
+      {name:"Willis Reed",role:"2x Champion & MVP",emoji:"🏆",type:"legend"},
+      {name:"Charles Oakley",role:"Fan Favorite Enforcer",emoji:"💪",type:"legend"},
+      {name:"Carmelo Anthony",role:"10x All-Star",emoji:"🍊",type:"legend"},
+    ]},
+    sixers:{name:"Philadelphia 76ers",voices:[
+      {name:"Josh Harris",role:"Former Owner",emoji:"💼",type:"fo"},
+      {name:"Daryl Morey",role:"President of Basketball Ops",emoji:"📊",type:"fo"},
+      {name:"Sam Hinkie",role:"The Process Architect",emoji:"🔬",type:"fo"},
+      {name:"Brett Brown",role:"Former Head Coach",emoji:"📝",type:"coach"},
+      {name:"Doug Collins",role:"Former Head Coach",emoji:"🎙️",type:"coach"},
+      {name:"Julius Erving",role:"ABA & NBA Legend – Dr. J",emoji:"🩺",type:"legend"},
+      {name:"Allen Iverson",role:"2001 MVP – The Answer",emoji:"❓",type:"legend"},
+      {name:"Charles Barkley",role:"1993 MVP – Sir Charles",emoji:"🐻",type:"legend"},
+      {name:"Moses Malone",role:"1983 Champion – Fo Fo Fo",emoji:"✊",type:"legend"},
+      {name:"Wilt Chamberlain",role:"100-Point Game Legend",emoji:"💯",type:"legend"},
+    ]},
+    raptors:{name:"Toronto Raptors",voices:[
+      {name:"Masai Ujiri",role:"President – Built the Championship",emoji:"🦁",type:"fo"},
+      {name:"Bobby Webster",role:"General Manager",emoji:"📋",type:"fo"},
+      {name:"Rob Babcock",role:"Former GM",emoji:"🎯",type:"fo"},
+      {name:"Nick Nurse",role:"2019 Champion Coach",emoji:"🧠",type:"coach"},
+      {name:"Dwane Casey",role:"Former Head Coach",emoji:"📝",type:"coach"},
+      {name:"Vince Carter",role:"Half-Man Half-Amazing",emoji:"🦅",type:"legend"},
+      {name:"Kyle Lowry",role:"2019 Champion – Mr. Raptor",emoji:"🏆",type:"legend"},
+      {name:"DeMar DeRozan",role:"4x All-Star",emoji:"⭐",type:"legend"},
+      {name:"Chris Bosh",role:"2019 Champion",emoji:"🦕",type:"legend"},
+      {name:"Tracy McGrady",role:"Scoring Machine",emoji:"🔥",type:"legend"},
+    ]},
+    cavaliers:{name:"Cleveland Cavaliers",voices:[
+      {name:"Dan Gilbert",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Koby Altman",role:"President of Basketball Ops",emoji:"📋",type:"fo"},
+      {name:"David Griffin",role:"Former GM – Built the 2016 Title",emoji:"🏆",type:"fo"},
+      {name:"Tyronn Lue",role:"2016 Champion Coach",emoji:"🎯",type:"coach"},
+      {name:"Mike Brown",role:"Former Head Coach",emoji:"📝",type:"coach"},
+      {name:"LeBron James",role:"4x Champion – The King",emoji:"👑",type:"legend"},
+      {name:"Kyrie Irving",role:"2016 Champion – Shot Maker",emoji:"🎯",type:"legend"},
+      {name:"Mark Price",role:"4x All-Star",emoji:"⭐",type:"legend"},
+      {name:"Brad Daugherty",role:"5x All-Star",emoji:"🐘",type:"legend"},
+      {name:"Zydrunas Ilgauskas",role:"Franchise Stalwart",emoji:"🏔️",type:"legend"},
+    ]},
+    pistons:{name:"Detroit Pistons",voices:[
+      {name:"Tom Gores",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Trajan Langdon",role:"President of Basketball Ops",emoji:"📋",type:"fo"},
+      {name:"Joe Dumars",role:"HOF GM – Built the Bad Boys",emoji:"🏆",type:"fo"},
+      {name:"Chuck Daly",role:"2x Champion Coach – Dream Team",emoji:"🏅",type:"coach"},
+      {name:"Larry Brown",role:"2004 Champion Coach",emoji:"📖",type:"coach"},
+      {name:"Isiah Thomas",role:"2x Champion – The Microwave",emoji:"🔥",type:"legend"},
+      {name:"Bill Laimbeer",role:"2x Champion – Bad Boy",emoji:"💀",type:"legend"},
+      {name:"Dennis Rodman",role:"2x Champion – The Worm",emoji:"🪱",type:"legend"},
+      {name:"Chauncey Billups",role:"2004 Champion MVP – Mr. Big Shot",emoji:"🎯",type:"legend"},
+      {name:"Grant Hill",role:"Co-Rookie of the Year",emoji:"⭐",type:"legend"},
+    ]},
+    pacers:{name:"Indiana Pacers",voices:[
+      {name:"Herb Simon",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Chad Buchanan",role:"General Manager",emoji:"📋",type:"fo"},
+      {name:"Larry Bird",role:"Former President – Celtic Legend",emoji:"🐦",type:"fo"},
+      {name:"Frank Vogel",role:"Former Head Coach",emoji:"📝",type:"coach"},
+      {name:"Flip Saunders",role:"Former Head Coach",emoji:"🎯",type:"coach"},
+      {name:"Reggie Miller",role:"Choke Artist Silencer – 8 Points in 9 Seconds",emoji:"🎯",type:"legend"},
+      {name:"Mel Daniels",role:"ABA Legend – 2x Champion",emoji:"🏆",type:"legend"},
+      {name:"Jalen Rose",role:"Pacers Core Leader",emoji:"🌹",type:"legend"},
+      {name:"Rik Smits",role:"The Dunking Dutchman",emoji:"🇳🇱",type:"legend"},
+      {name:"Mark Jackson",role:"Former Star PG",emoji:"⭐",type:"legend"},
+    ]},
+    bucks:{name:"Milwaukee Bucks",voices:[
+      {name:"Wes Edens",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Jon Horst",role:"General Manager",emoji:"📋",type:"fo"},
+      {name:"John Hammond",role:"Former GM",emoji:"🎯",type:"fo"},
+      {name:"Mike Budenholzer",role:"2021 Champion Coach",emoji:"🏆",type:"coach"},
+      {name:"Don Nelson",role:"Former Coach – 1971 Champion",emoji:"📝",type:"coach"},
+      {name:"Kareem Abdul-Jabbar",role:"1971 Champion – Skyhook",emoji:"🦒",type:"legend"},
+      {name:"Oscar Robertson",role:"The Big O – HOF",emoji:"⭐",type:"legend"},
+      {name:"Bob Dandridge",role:"2x Champion",emoji:"🏅",type:"legend"},
+      {name:"Jon McGlocklin",role:"1971 Champion",emoji:"🏆",type:"legend"},
+      {name:"Ray Allen",role:"Jesus Shuttlesworth",emoji:"🙏",type:"legend"},
+    ]},
+    hawks:{name:"Atlanta Hawks",voices:[
+      {name:"Tony Ressler",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Landry Fields",role:"General Manager",emoji:"📋",type:"fo"},
+      {name:"Travis Schlenk",role:"Former GM",emoji:"🎯",type:"fo"},
+      {name:"Mike Fratello",role:"Former Coach – The Czar",emoji:"🎙️",type:"coach"},
+      {name:"Lenny Wilkens",role:"HOF Coach",emoji:"📖",type:"coach"},
+      {name:"Dominique Wilkins",role:"Human Highlight Film",emoji:"🎬",type:"legend"},
+      {name:"Bob Pettit",role:"First NBA MVP",emoji:"🥇",type:"legend"},
+      {name:"Dikembe Mutombo",role:"4x DPOY",emoji:"☝️",type:"legend"},
+      {name:"Pete Maravich",role:"Pistol Pete – Scoring Legend",emoji:"🔫",type:"legend"},
+      {name:"Steve Smith",role:"1-Time All-Star",emoji:"⭐",type:"legend"},
+    ]},
+    hornets:{name:"Charlotte Hornets",voices:[
+      {name:"Michael Jordan",role:"Owner – 6x Champion",emoji:"🐐",type:"fo"},
+      {name:"Mitch Kupchak",role:"General Manager",emoji:"📋",type:"fo"},
+      {name:"Rich Cho",role:"Former GM",emoji:"🎯",type:"fo"},
+      {name:"Larry Brown",role:"Former Head Coach",emoji:"📖",type:"coach"},
+      {name:"Paul Silas",role:"Former Head Coach",emoji:"📝",type:"coach"},
+      {name:"Larry Johnson",role:"Grandmama",emoji:"👵",type:"legend"},
+      {name:"Alonzo Mourning",role:"HOF – Zo",emoji:"🦁",type:"legend"},
+      {name:"Muggsy Bogues",role:"Shortest Player in NBA History",emoji:"🐭",type:"legend"},
+      {name:"Dell Curry",role:"Franchise Scoring Leader",emoji:"🍛",type:"legend"},
+      {name:"Glen Rice",role:"1997 All-Star MVP",emoji:"🌾",type:"legend"},
+    ]},
+    heat:{name:"Miami Heat",voices:[
+      {name:"Micky Arison",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Pat Riley",role:"President – Master Builder",emoji:"🕴️",type:"fo"},
+      {name:"Andy Elisburg",role:"General Manager",emoji:"📋",type:"fo"},
+      {name:"Erik Spoelstra",role:"4x Champion Coach",emoji:"🧠",type:"coach"},
+      {name:"Stan Van Gundy",role:"Former Head Coach",emoji:"📝",type:"coach"},
+      {name:"Dwyane Wade",role:"3x Champion – Flash",emoji:"⚡",type:"legend"},
+      {name:"LeBron James",role:"2x Heat Champion – The King",emoji:"👑",type:"legend"},
+      {name:"Alonzo Mourning",role:"HOF – 2006 Champion",emoji:"🦁",type:"legend"},
+      {name:"Tim Hardaway",role:"Killer Crossover",emoji:"🔪",type:"legend"},
+      {name:"Chris Bosh",role:"2x Champion",emoji:"🦕",type:"legend"},
+    ]},
+    magic:{name:"Orlando Magic",voices:[
+      {name:"Dan DeVos",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Jeff Weltman",role:"President of Basketball Ops",emoji:"📋",type:"fo"},
+      {name:"John Gabriel",role:"Former GM",emoji:"🎯",type:"fo"},
+      {name:"Doc Rivers",role:"Former Head Coach",emoji:"🗣️",type:"coach"},
+      {name:"Brian Hill",role:"Former Head Coach",emoji:"📝",type:"coach"},
+      {name:"Shaquille O'Neal",role:"3x All-Star as Magic – Diesel",emoji:"⚡",type:"legend"},
+      {name:"Penny Hardaway",role:"4x All-Star – Lil Penny",emoji:"🪙",type:"legend"},
+      {name:"Dwight Howard",role:"3x DPOY as Magic",emoji:"💪",type:"legend"},
+      {name:"Nick Anderson",role:"The Original No. 25",emoji:"⭐",type:"legend"},
+      {name:"Horace Grant",role:"1995 Champion – 3 Goggles",emoji:"🥽",type:"legend"},
+    ]},
+    wizards:{name:"Washington Wizards",voices:[
+      {name:"Ted Leonsis",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Michael Winger",role:"President of Basketball Ops",emoji:"📋",type:"fo"},
+      {name:"Ernie Grunfeld",role:"Former GM",emoji:"🎯",type:"fo"},
+      {name:"Wes Unseld",role:"HOF Coach & Player",emoji:"🧱",type:"coach"},
+      {name:"Flip Saunders",role:"Former Head Coach",emoji:"📝",type:"coach"},
+      {name:"Elvin Hayes",role:"HOF – The Big E",emoji:"🐘",type:"legend"},
+      {name:"Wes Unseld",role:"HOF – 1978 Champion",emoji:"🏆",type:"legend"},
+      {name:"Walt Bellamy",role:"HOF – 2362 Career Pts Season",emoji:"📊",type:"legend"},
+      {name:"Gilbert Arenas",role:"3x All-Star – Agent Zero",emoji:"🔫",type:"legend"},
+      {name:"John Wall",role:"5x All-Star",emoji:"🧱",type:"legend"},
+    ]},
+    nuggets:{name:"Denver Nuggets",voices:[
+      {name:"Stan Kroenke",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Calvin Booth",role:"General Manager",emoji:"📋",type:"fo"},
+      {name:"Tim Connelly",role:"Former President",emoji:"🎯",type:"fo"},
+      {name:"Doug Moe",role:"Former Coach – Legend",emoji:"☁️",type:"coach"},
+      {name:"George Karl",role:"Former Coach – 443 Wins",emoji:"📝",type:"coach"},
+      {name:"Dan Issel",role:"HOF – The Horse",emoji:"🐴",type:"legend"},
+      {name:"David Thompson",role:"Skywalker",emoji:"🚀",type:"legend"},
+      {name:"Alex English",role:"8x All-Star – Smooth",emoji:"🎸",type:"legend"},
+      {name:"Dikembe Mutombo",role:"4x DPOY",emoji:"☝️",type:"legend"},
+      {name:"Carmelo Anthony",role:"3x Scoring Champ",emoji:"🍊",type:"legend"},
+    ]},
+    timberwolves:{name:"Minnesota Timberwolves",voices:[
+      {name:"Glen Taylor",role:"Former Owner",emoji:"💼",type:"fo"},
+      {name:"Tim Connelly",role:"President of Basketball Ops",emoji:"📋",type:"fo"},
+      {name:"Kevin McHale",role:"HOF – Former GM",emoji:"🎯",type:"fo"},
+      {name:"Flip Saunders",role:"HOF Coach – Built KG Era",emoji:"🏆",type:"coach"},
+      {name:"Chris Finch",role:"Current Head Coach",emoji:"📝",type:"coach"},
+      {name:"Kevin Garnett",role:"2004 MVP – The Big Ticket",emoji:"⚡",type:"legend"},
+      {name:"Kevin Love",role:"2016 NBA Champion",emoji:"💝",type:"legend"},
+      {name:"Tom Gugliotta",role:"First Wolves All-Star",emoji:"⭐",type:"legend"},
+      {name:"Sam Mitchell",role:"Former Player & Coach",emoji:"🌿",type:"legend"},
+      {name:"Stephon Marbury",role:"2x All-Star",emoji:"🌟",type:"legend"},
+    ]},
+    thunder:{name:"Oklahoma City Thunder",voices:[
+      {name:"Clay Bennett",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Sam Presti",role:"GM – League Best Asset Builder",emoji:"🎯",type:"fo"},
+      {name:"Troy Weaver",role:"Former Scout",emoji:"📋",type:"fo"},
+      {name:"Scott Brooks",role:"Former Coach – Led 2012 Finals",emoji:"📝",type:"coach"},
+      {name:"Nate McMillan",role:"Former Interim Coach",emoji:"🧠",type:"coach"},
+      {name:"Kevin Durant",role:"2x Champion – Slim Reaper",emoji:"🌵",type:"legend"},
+      {name:"Russell Westbrook",role:"2017 MVP – Brodie",emoji:"⚡",type:"legend"},
+      {name:"James Harden",role:"2018 MVP – The Beard",emoji:"🧔",type:"legend"},
+      {name:"Gary Payton",role:"HOF – The Glove (SuperSonics)",emoji:"🧤",type:"legend"},
+      {name:"Shawn Kemp",role:"6x All-Star (SuperSonics)",emoji:"💥",type:"legend"},
+    ]},
+    blazers:{name:"Portland Trail Blazers",voices:[
+      {name:"Jody Allen",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Joe Cronin",role:"President of Basketball Ops",emoji:"📋",type:"fo"},
+      {name:"Neil Olshey",role:"Former GM",emoji:"🎯",type:"fo"},
+      {name:"Jack Ramsay",role:"HOF Champion Coach – Dr. Jack",emoji:"🏆",type:"coach"},
+      {name:"Terry Stotts",role:"Former Coach – 10 Seasons",emoji:"📝",type:"coach"},
+      {name:"Bill Walton",role:"1977 Champion & MVP",emoji:"🎸",type:"legend"},
+      {name:"Clyde Drexler",role:"HOF – The Glide",emoji:"🌊",type:"legend"},
+      {name:"Damian Lillard",role:"6x All-Star – Dame Time",emoji:"⏰",type:"legend"},
+      {name:"Brandon Roy",role:"3x All-Star",emoji:"🌹",type:"legend"},
+      {name:"Terry Porter",role:"2x Finals Appearance Leader",emoji:"⭐",type:"legend"},
+    ]},
+    jazz:{name:"Utah Jazz",voices:[
+      {name:"Ryan Smith",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Justin Zanik",role:"General Manager",emoji:"📋",type:"fo"},
+      {name:"Kevin O'Connor",role:"Former GM – Built the Dynasty",emoji:"🎯",type:"fo"},
+      {name:"Jerry Sloan",role:"HOF Coach – 23 Seasons",emoji:"🌾",type:"coach"},
+      {name:"Frank Layden",role:"Former Coach – Builder",emoji:"📝",type:"coach"},
+      {name:"Karl Malone",role:"2x MVP – The Mailman",emoji:"📬",type:"legend"},
+      {name:"John Stockton",role:"HOF – All-Time Assists Leader",emoji:"🃏",type:"legend"},
+      {name:"Adrian Dantley",role:"6x Scoring Champ",emoji:"💯",type:"legend"},
+      {name:"Andrei Kirilenko",role:"The AK-47",emoji:"🇷🇺",type:"legend"},
+      {name:"Darrell Griffith",role:"Dr. Dunkenstein",emoji:"⚡",type:"legend"},
+    ]},
+    warriors:{name:"Golden State Warriors",voices:[
+      {name:"Joe Lacob",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Mike Dunleavy Jr.",role:"General Manager",emoji:"📋",type:"fo"},
+      {name:"Bob Myers",role:"Former GM – 4 Championships",emoji:"🏆",type:"fo"},
+      {name:"Steve Kerr",role:"5x Champion Coach",emoji:"🧠",type:"coach"},
+      {name:"Don Nelson",role:"HOF Coach – 1331 Wins",emoji:"🍺",type:"coach"},
+      {name:"Stephen Curry",role:"2x MVP – Chef Curry",emoji:"👨‍🍳",type:"legend"},
+      {name:"Klay Thompson",role:"4x Champion – Splash Bro",emoji:"💦",type:"legend"},
+      {name:"Draymond Green",role:"4x Champion – DPOY",emoji:"🟢",type:"legend"},
+      {name:"Rick Barry",role:"1975 Champion – HOF",emoji:"⭐",type:"legend"},
+      {name:"Chris Mullin",role:"HOF – Run TMC",emoji:"🌟",type:"legend"},
+    ]},
+    clippers:{name:"Los Angeles Clippers",voices:[
+      {name:"Steve Ballmer",role:"Owner – All-In",emoji:"💼",type:"fo"},
+      {name:"Lawrence Frank",role:"President of Basketball Ops",emoji:"📋",type:"fo"},
+      {name:"Neil Olshey",role:"Former GM",emoji:"🎯",type:"fo"},
+      {name:"Tyronn Lue",role:"Head Coach",emoji:"📝",type:"coach"},
+      {name:"Doc Rivers",role:"Former Head Coach",emoji:"🗣️",type:"coach"},
+      {name:"Elgin Baylor",role:"HOF – Former GM & Player",emoji:"🦅",type:"legend"},
+      {name:"Chris Paul",role:"12x All-Star – The Point God",emoji:"🙏",type:"legend"},
+      {name:"Blake Griffin",role:"6x All-Star – Lob City",emoji:"💥",type:"legend"},
+      {name:"DeAndre Jordan",role:"3x All-NBA",emoji:"🗺️",type:"legend"},
+      {name:"World B. Free",role:"Fan Favorite Scorer",emoji:"🌍",type:"legend"},
+    ]},
+    lakers:{name:"Los Angeles Lakers",voices:[
+      {name:"Jeanie Buss",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Rob Pelinka",role:"VP & General Manager",emoji:"📋",type:"fo"},
+      {name:"Jerry West",role:"Mr. Clutch – Logo Man",emoji:"🏀",type:"fo"},
+      {name:"Phil Jackson",role:"11x Champion Coach",emoji:"🧘",type:"coach"},
+      {name:"Pat Riley",role:"5x Champion Coach",emoji:"🕴️",type:"coach"},
+      {name:"Kobe Bryant",role:"5x Champion – Black Mamba",emoji:"🐍",type:"legend"},
+      {name:"Magic Johnson",role:"5x Champion – Showtime",emoji:"✨",type:"legend"},
+      {name:"Kareem Abdul-Jabbar",role:"6x MVP – Skyhook",emoji:"🦒",type:"legend"},
+      {name:"Shaquille O'Neal",role:"3x Laker Champion – Diesel",emoji:"⚡",type:"legend"},
+      {name:"Elgin Baylor",role:"HOF – Lakers Icon",emoji:"🦅",type:"legend"},
+    ]},
+    suns:{name:"Phoenix Suns",voices:[
+      {name:"Mat Ishbia",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"James Jones",role:"VP & General Manager",emoji:"📋",type:"fo"},
+      {name:"Jerry Colangelo",role:"Franchise Builder",emoji:"🏗️",type:"fo"},
+      {name:"Mike D'Antoni",role:"Former Coach – 7 Seconds or Less",emoji:"⏱️",type:"coach"},
+      {name:"Alvin Gentry",role:"Former Head Coach",emoji:"📝",type:"coach"},
+      {name:"Charles Barkley",role:"1993 MVP – Round Mound",emoji:"🐻",type:"legend"},
+      {name:"Steve Nash",role:"2x MVP – The Canadian Kid",emoji:"🍁",type:"legend"},
+      {name:"Kevin Johnson",role:"3x All-Star",emoji:"🏃",type:"legend"},
+      {name:"Paul Westphal",role:"5x All-Star",emoji:"⭐",type:"legend"},
+      {name:"Shawn Marion",role:"The Matrix",emoji:"🔢",type:"legend"},
+    ]},
+    kings:{name:"Sacramento Kings",voices:[
+      {name:"Vivek Ranadive",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Monte McNair",role:"General Manager",emoji:"📋",type:"fo"},
+      {name:"Geoff Petrie",role:"Former GM – HOF Contributor",emoji:"🏆",type:"fo"},
+      {name:"Rick Adelman",role:"HOF Coach – 7 Seasons",emoji:"📖",type:"coach"},
+      {name:"Mike Bibby",role:"2002 WCF Star",emoji:"📝",type:"coach"},
+      {name:"Chris Webber",role:"5x All-Star – C-Webb",emoji:"🕸️",type:"legend"},
+      {name:"Mitch Richmond",role:"HOF – The Rock",emoji:"🪨",type:"legend"},
+      {name:"Vlade Divac",role:"HOF – Euro Pioneer",emoji:"🇷🇸",type:"legend"},
+      {name:"Bobby Jackson",role:"Sixth Man Award",emoji:"6️⃣",type:"legend"},
+      {name:"Jason Williams",role:"White Chocolate",emoji:"🍫",type:"legend"},
+    ]},
+    mavericks:{name:"Dallas Mavericks",voices:[
+      {name:"Patrick Dumont",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Nico Harrison",role:"General Manager",emoji:"📋",type:"fo"},
+      {name:"Donnie Nelson",role:"Former GM",emoji:"🎯",type:"fo"},
+      {name:"Rick Carlisle",role:"2011 Champion Coach",emoji:"🏆",type:"coach"},
+      {name:"Don Nelson",role:"Former Coach",emoji:"🍺",type:"coach"},
+      {name:"Dirk Nowitzki",role:"2011 MVP & Champion – The Irisher",emoji:"🦄",type:"legend"},
+      {name:"Jason Kidd",role:"2011 Champion",emoji:"🎲",type:"legend"},
+      {name:"Mark Aguirre",role:"3x All-Star",emoji:"⭐",type:"legend"},
+      {name:"Rolando Blackman",role:"4x All-Star",emoji:"🌑",type:"legend"},
+      {name:"Michael Finley",role:"2x All-Star",emoji:"🔥",type:"legend"},
+    ]},
+    rockets:{name:"Houston Rockets",voices:[
+      {name:"Tilman Fertitta",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Rafael Stone",role:"General Manager",emoji:"📋",type:"fo"},
+      {name:"Daryl Morey",role:"Former GM – Moreyball",emoji:"📊",type:"fo"},
+      {name:"Rudy Tomjanovich",role:"2x Champion Coach",emoji:"🏆",type:"coach"},
+      {name:"Del Harris",role:"Former Head Coach",emoji:"📝",type:"coach"},
+      {name:"Hakeem Olajuwon",role:"2x Champion & MVP – The Dream",emoji:"💭",type:"legend"},
+      {name:"Clyde Drexler",role:"1995 Champion – The Glide",emoji:"🌊",type:"legend"},
+      {name:"Moses Malone",role:"HOF",emoji:"✊",type:"legend"},
+      {name:"Calvin Murphy",role:"HOF – Free Throw King",emoji:"🎯",type:"legend"},
+      {name:"James Harden",role:"2018 MVP – The Beard",emoji:"🧔",type:"legend"},
+    ]},
+    grizzlies:{name:"Memphis Grizzlies",voices:[
+      {name:"Robert Pera",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Zach Kleiman",role:"President of Basketball Ops",emoji:"📋",type:"fo"},
+      {name:"Chris Wallace",role:"Former GM",emoji:"🎯",type:"fo"},
+      {name:"Lionel Hollins",role:"2013 WCF Coach",emoji:"📝",type:"coach"},
+      {name:"Hubie Brown",role:"Former Coach – Legend",emoji:"📖",type:"coach"},
+      {name:"Pau Gasol",role:"HOF – Franchise Cornerstone",emoji:"🇪🇸",type:"legend"},
+      {name:"Marc Gasol",role:"DPOY – Franchise Cornerstone",emoji:"🐻",type:"legend"},
+      {name:"Zach Randolph",role:"Grit and Grind Leader – Z-Bo",emoji:"💪",type:"legend"},
+      {name:"Mike Conley",role:"Franchise PG",emoji:"🐐",type:"legend"},
+      {name:"Tony Allen",role:"Grind House Legend",emoji:"🔩",type:"legend"},
+    ]},
+    pelicans:{name:"New Orleans Pelicans",voices:[
+      {name:"Gayle Benson",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Swin Cash",role:"VP of Basketball Operations",emoji:"📋",type:"fo"},
+      {name:"David Griffin",role:"Former GM",emoji:"🎯",type:"fo"},
+      {name:"Monty Williams",role:"Former Head Coach",emoji:"📝",type:"coach"},
+      {name:"Byron Scott",role:"Former Head Coach",emoji:"🧢",type:"coach"},
+      {name:"Pete Maravich",role:"HOF – Pistol Pete (Jazz era in NOLA)",emoji:"🔫",type:"legend"},
+      {name:"Chris Paul",role:"Former Hornet All-Star",emoji:"🙏",type:"legend"},
+      {name:"Anthony Davis",role:"6x All-Star as Pelican",emoji:"🦅",type:"legend"},
+      {name:"David West",role:"2x All-Star",emoji:"⭐",type:"legend"},
+      {name:"Peja Stojakovic",role:"3x All-Star",emoji:"🇷🇸",type:"legend"},
+    ]},
+    spurs:{name:"San Antonio Spurs",voices:[
+      {name:"Peter Holt",role:"Owner",emoji:"💼",type:"fo"},
+      {name:"Brian Wright",role:"General Manager",emoji:"📋",type:"fo"},
+      {name:"R.C. Buford",role:"Former GM – 5 Rings",emoji:"🏆",type:"fo"},
+      {name:"Gregg Popovich",role:"5x Champion Coach – Legend",emoji:"🧠",type:"coach"},
+      {name:"Larry Brown",role:"Former Coach",emoji:"📖",type:"coach"},
+      {name:"Tim Duncan",role:"5x Champion & 2x MVP – The Big Fundamental",emoji:"🏛️",type:"legend"},
+      {name:"David Robinson",role:"1999 Champion & MVP – The Admiral",emoji:"⚓",type:"legend"},
+      {name:"Tony Parker",role:"4x Champion & Finals MVP",emoji:"🇫🇷",type:"legend"},
+      {name:"Manu Ginobili",role:"4x Champion – El Contusion",emoji:"🇦🇷",type:"legend"},
+      {name:"George Gervin",role:"HOF – The Iceman",emoji:"🧊",type:"legend"},
+    ]},
+  };
+
+  const TEAM_STORAGE_KEY="gmgrader-v5-team";
+
+function App(){
+  const [tab,setTab]=useState("input");
+  const [loading,setLoading]=useState(false);
+  const [summLoading,setSummLoading]=useState(false);
+  const [rumSummLoading,setRumSummLoading]=useState(false);
+  const [err,setErr]=useState(null);
+  const [moves,setMoves]=useState([]);
+  const [rumors,setRumors]=useState([]);
+  const [cur,setCur]=useState(null);
+  const [notes,setNotes]=useState("");
+  const [rumorTxt,setRumorTxt]=useState("");
+  const [ready,setReady]=useState(false);
+  const [saveOk,setSaveOk]=useState(null);
+  const [delConfirm,setDelConfirm]=useState(null);
+  const [confirmClear,setConfirmClear]=useState(false);
+  const [showImport,setShowImport]=useState(false);
+  const [importTxt,setImportTxt]=useState("");
+  const [importErr,setImportErr]=useState(null);
+  const [syncOpen,setSyncOpen]=useState(false);
+  const [syncPaste,setSyncPaste]=useState("");
+  const [syncErr,setSyncErr]=useState(null);
+  const [copied,setCopied]=useState(false);
+  const [gmSummary,setGmSummary]=useState(null);
+  const [rumorSummary,setRumorSummary]=useState(null);
+  const [shareLoaded,setShareLoaded]=useState(false);
+  const [selectedTeam,setSelectedTeam]=useState(null);
+  const [showTeamPicker,setShowTeamPicker]=useState(false);
+  const [showChangeTeamConfirm,setShowChangeTeamConfirm]=useState(false);
+  const [pendingTeamSwitch,setPendingTeamSwitch]=useState(false);
+  const [lastSyncSnapshot,setLastSyncSnapshot]=useState(null); // {moveCount, rumorCount, at}
+  const [consultNotes,setConsultNotes]=useState("");
+  const [consultLoading,setConsultLoading]=useState(false);
+  const [consultResult,setConsultResult]=useState(null);
+  const [consultErr,setConsultErr]=useState(null);
+
+  useEffect(()=>{
+    async function load(){
+      try{
+        const hash=window.location.hash;
+        if(hash.startsWith('#gm:')){
+          const code=hash.slice(4).replace(/\s+/g,'');
+          const d=decode(code);
+          if(d&&Array.isArray(d.m)&&d.m.length){
+            setMoves(d.m);setRumors(d.r||[]);setCur(d.m[0]);
+            await Promise.all([wSet(STORAGE_KEY,d.m),wSet(RUMOR_KEY,d.r||[])]);
+            history.replaceState(null,'',window.location.pathname+window.location.search);
+            if(d.t&&TEAM_DATA[d.t]){setSelectedTeam(d.t);wSet(TEAM_STORAGE_KEY,d.t);}
+            setShowTeamPicker(false);
+            setShareLoaded(true);setTimeout(()=>setShareLoaded(false),4000);
+            setReady(true);return;
+          }
+        }
+      }catch(e){}
+      if(HWS){
+        try{
+          const timeout=new Promise(res=>setTimeout(()=>res(null),3000));
+          const data=await Promise.race([Promise.all([wGet(STORAGE_KEY),wGet(RUMOR_KEY),wGet(GMSUMM_KEY),wGet(RUMSUMM_KEY)]),timeout]);
+          if(Array.isArray(data)){
+            const [m,r,gs,rs]=data;
+            if(Array.isArray(m)&&m.length){setMoves(m);setCur(m[0]);}
+            if(Array.isArray(r))setRumors(r);
+            if(gs)setGmSummary(gs);
+            if(rs)setRumorSummary(rs);
+          }
+        }catch(e){}
+      }
+      // Load selected team
+      try{
+        const t=await wGet(TEAM_STORAGE_KEY);
+        if(t)setSelectedTeam(t);
+        else setShowTeamPicker(true);
+      }catch(e){setShowTeamPicker(true);}
+      setReady(true);
+    }
+    load();
+  },[]);
+
+
+
+  async function persistMoves(m){const ok=await wSet(STORAGE_KEY,m);setSaveOk(ok?"ok":"fail");setTimeout(()=>setSaveOk(null),2000);}
+  async function persistRumors(r){await wSet(RUMOR_KEY,r);}
+  const avgGM=numAvg(moves,"gmGrade");
+  const hasUnsyncedChanges=!lastSyncSnapshot||(moves.length!==lastSyncSnapshot.moveCount||rumors.length!==lastSyncSnapshot.rumorCount);
+  const avgReal=numAvg(moves,"tradeRealism");
+  const overallGrade=s2g(avgGM);
+  function computeRanks(scoreOvr){const us=scoreOvr!=null?scoreOvr:(avgGM!=null?avgGM:70);return[...LEAGUE_GMS,{name:"YOU",team:(TEAM_DATA[selectedTeam]||TEAM_DATA.bulls).name,score:us,isUser:true}].sort((a,b)=>b.score-a.score);}
+  const ranked=computeRanks();
+  const userRank=ranked.findIndex(g=>g.isUser)+1;
+  let prevRank=null;
+  if(moves.length>=2){const ps=numAvg(moves.slice(1),"gmGrade");const pr=computeRanks(ps!=null?ps:70);prevRank=pr.findIndex(g=>g.isUser)+1;}
+  const rankDelta=prevRank!=null?prevRank-userRank:0;
+
+  async function generateGmSummary(allMoves){
+    if(allMoves.length<1)return;setSummLoading(true);
+    try{
+      const recent=allMoves.slice(0,5);
+      const prompt=`You are an expert NBA analyst writing a brief insider assessment of a Chicago Bulls GM in NBA 2K26 franchise mode.\n\nHere are the GM's most recent moves (latest first):\n${recent.map((m,i)=>`${i+1}. [${m.moveType}] Realism:${m.analysis?.tradeRealism?.grade}(${m.analysis?.tradeRealism?.score}) | GM Grade:${m.analysis?.gmGrade?.grade}(${m.analysis?.gmGrade?.score})\n   Notes: ${m.notes.slice(0,200)}\n   Verdict: ${m.analysis?.verdict}`).join("\n\n")}\n\nWrite a 3-5 sentence insider summary assessing what this GM is doing. IMPORTANT: Arturas Karnisovas is no longer with the Bulls — do NOT mention him. The Bulls have a new GM. Be specific — reference 1-2 of his actual moves. Characterize what mode he is in (e.g. buying, selling, aggressive rebuild, hot seat, under management pressure, rising from the ranks, excellence). Write as if you are an NBA insider columnist — sharp, direct, opinionated. No bullet points. Plain prose only.`;
+      const text=await callClaude(prompt);setGmSummary(text);await wSet(GMSUMM_KEY,text);
+    }catch(e){console.error("GM summary failed",e);}finally{setSummLoading(false);}
+  }
+  async function generateRumorSummary(allRumors,allMoves){
+    if(allRumors.length<1)return;setRumSummLoading(true);
+    try{
+      const recent=allRumors.slice(0,5);
+      const moveCtx=allMoves.slice(0,3).map(m=>`[${m.moveType}] ${m.analysis?.verdict}`).join("; ");
+      const prompt=`You are an NBA insider summarizing the current situation around the Chicago Bulls based on war room rumors and recent moves.\n\nActive rumors (latest first):\n${recent.map((r,i)=>`${i+1}. ${r.text}`).join("\n")}\n\nRecent moves context: ${moveCtx||"No moves logged yet."}\n\nWrite a 3-5 sentence insider summary of the Bulls' organizational situation right now. Be specific — reference 1-2 of the actual rumors. Characterize where the team and ownership stands (e.g. championship push, tanking, losing skid, 10-game win streak, player development mode, dysfunctional locker room, ownership friction, etc.). Write as if you are an NBA insider columnist — sharp, direct, opinionated. No bullet points. Plain prose only.`;
+      const text=await callClaude(prompt);setRumorSummary(text);await wSet(RUMSUMM_KEY,text);
+    }catch(e){console.error("Rumor summary failed",e);}finally{setRumSummLoading(false);}
+  }
+
+  function buildPrompt(){
+    const bp=pick(BP,3),lp=pick(LP,3);
+    const hist=moves.length?"\n\nPrevious moves:\n"+moves.slice(0,8).map((m,i)=>`${i+1}. [${m.moveType}] Realism:${m.analysis?.tradeRealism?.grade}(${m.analysis?.tradeRealism?.score}) GM:${m.analysis?.gmGrade?.grade}(${m.analysis?.gmGrade?.score}) — ${m.analysis?.verdict}`).join("\n"):"";
+    const rc=rumors.length?"\n\nWar room rumors:\n"+rumors.slice(0,5).map(r=>`- ${r.text}`).join("\n"):"";
+    return `You are a hard-grading NBA analyst and cap expert evaluating a Chicago Bulls GM move in NBA 2K26 franchise mode.\n\nIMPORTANT CONTEXT: Arturas Karnisovas is no longer with the Bulls organization. The GM being evaluated here is a new front office executive. Do NOT reference Karnisovas in any reactions or analysis.\n\nGM Notes:\n---\n${notes.trim()}\n---\n${hist}${rc}\n\nInstructions:\n1. Identify move type (ONE): Trade, Free Agent Signing, Extension, Waiver Claim, Draft Pick Trade, Buyout Claim, Draft Pick, Hire/Fire Staff, Waive, Cap Strategy\n\n2. GRADE STRICTLY:\n   - A-range (87-100): Franchise-altering elite decisions only. Rare.\n   - B-range (77-86): Solid, genuinely improves the team\n   - C-range (67-76): Mediocre — gets something done but at real cost\n   - D/F (below 67): Overpay, bad value, or strategically incoherent\n   Default: most moves are B or C. Award A only if truly excellent.\n\n3. Generate reactions from EXACTLY these insiders:\n   Bulls: ${bp.map(i=>`${i.n} (${i.p})`).join(", ")}\n   League: ${lp.map(i=>`${i.n} (${i.p})`).join(", ")}\n\nRespond ONLY raw JSON, no markdown:\n\n{"moveType":"Trade","tradeRealism":{"grade":"B","score":81,"summary":"2-3 sentences"},"gmGrade":{"grade":"B-","score":79,"summary":"2-3 sentences"},"bullsReactions":[{"insider":"${bp[0].n}","publication":"${bp[0].p}","reaction":"1-2 sentences"},{"insider":"${bp[1].n}","publication":"${bp[1].p}","reaction":"1-2 sentences"},{"insider":"${bp[2].n}","publication":"${bp[2].p}","reaction":"1-2 sentences"}],"otherTeamReactions":[{"insider":"${lp[0].n}","publication":"${lp[0].p}","reaction":"1-2 sentences"},{"insider":"${lp[1].n}","publication":"${lp[1].p}","reaction":"1-2 sentences"},{"insider":"${lp[2].n}","publication":"${lp[2].p}","reaction":"1-2 sentences"}],"capAnalysis":"2 sentences","verdict":"Max 10 words"}`;
+  }
+
+  async function submit(){
+    if(!notes.trim()){setErr("Drop your GM notes first.");return;}
+    setLoading(true);setErr(null);
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1600,messages:[{role:"user",content:buildPrompt()}]})});
+      const data=await res.json();
+      if(data.error)throw new Error(data.error.message);
+      const txt=data.content.filter(b=>b.type==="text").map(b=>b.text).join("\n");
+      const cleaned=txt.replace(/```json|```/g,"").trim();
+      const s=cleaned.indexOf("{"),e=cleaned.lastIndexOf("}");
+      if(s===-1||e===-1)throw new Error("No JSON");
+      const analysis=JSON.parse(cleaned.slice(s,e+1));
+      if(analysis.tradeRealism?.score)analysis.tradeRealism.score=Number(analysis.tradeRealism.score);
+      if(analysis.gmGrade?.score)analysis.gmGrade.score=Number(analysis.gmGrade.score);
+      const move={id:Date.now(),notes:notes.trim(),moveType:analysis.moveType,timestamp:new Date().toLocaleString(),analysis};
+      const nm=[move,...moves];
+      setMoves(nm);setCur(move);setNotes("");setTab("result");
+      await persistMoves(nm);generateGmSummary(nm);
+    }catch(e){setErr("Analysis failed: "+e.message);console.error(e);}finally{setLoading(false);}
+  }
+
+  async function deleteMove(id,ev){
+    if(ev)ev.stopPropagation();
+    if(delConfirm!==id){setDelConfirm(id);setTimeout(()=>setDelConfirm(dc=>dc===id?null:dc),3000);return;}
+    const updated=moves.filter(m=>m.id!==id);setMoves(updated);setDelConfirm(null);
+    if(cur?.id===id){const nx=updated[0]||null;setCur(nx);setTab(nx?"result":"input");}
+    if(updated.length){await persistMoves(updated);generateGmSummary(updated);}
+    else{await wDel(STORAGE_KEY);setGmSummary(null);await wDel(GMSUMM_KEY);}
+  }
+  async function saveRumor(){
+    if(!rumorTxt.trim())return;
+    const r={id:Date.now(),text:rumorTxt.trim(),timestamp:new Date().toLocaleString()};
+    const updated=[r,...rumors];setRumors(updated);setRumorTxt("");
+    await persistRumors(updated);generateRumorSummary(updated,moves);
+  }
+  async function deleteRumor(id){
+    const updated=rumors.filter(r=>r.id!==id);setRumors(updated);
+    await persistRumors(updated);
+    if(updated.length)generateRumorSummary(updated,moves);
+    else{setRumorSummary(null);await wDel(RUMSUMM_KEY);}
+  }
+  function exportExcel(){
+    if(!moves.length)return;
+    const rows=moves.map(m=>({"Date":m.timestamp,"Move Type":m.moveType,"GM Notes":m.notes,"Realism Grade":m.analysis?.tradeRealism?.grade||"","Realism Score":m.analysis?.tradeRealism?.score||"","Realism Summary":m.analysis?.tradeRealism?.summary||"","GM Grade":m.analysis?.gmGrade?.grade||"","GM Score":m.analysis?.gmGrade?.score||"","GM Summary":m.analysis?.gmGrade?.summary||"","Cap Analysis":m.analysis?.capAnalysis||"","Verdict":m.analysis?.verdict||""}));
+    const ws=XLSX.utils.json_to_sheet(rows);ws["!cols"]=[{wch:20},{wch:18},{wch:55},{wch:13},{wch:12},{wch:50},{wch:11},{wch:11},{wch:50},{wch:50},{wch:40}];
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"GM Moves");XLSX.writeFile(wb,"2k26-gm-log.xlsx");
+  }
+  function importLog(){
+    setImportErr(null);
+    try{
+      const p=JSON.parse(importTxt.trim());if(!Array.isArray(p))throw new Error();
+      const merged=[...p,...moves.filter(m=>!p.find(x=>x.id===m.id))].sort((a,b)=>b.id-a.id);
+      setMoves(merged);if(merged.length)setCur(merged[0]);
+      persistMoves(merged);generateGmSummary(merged);setImportTxt("");setShowImport(false);
+    }catch(e){setImportErr("Invalid JSON — paste the full exported text.");}
+  }
+  async function clearAll(){
+    if(!confirmClear){setConfirmClear(true);setTimeout(()=>setConfirmClear(false),3000);return;}
+    setMoves([]);setCur(null);setRumors([]);setGmSummary(null);setRumorSummary(null);setTab("input");setConfirmClear(false);
+    await Promise.all([wDel(STORAGE_KEY),wDel(RUMOR_KEY),wDel(GMSUMM_KEY),wDel(RUMSUMM_KEY)]);
+  }
+  function copySyncCode(){
+    const code=encode(moves,rumors,selectedTeam);if(!code)return;
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),3000);setLastSyncSnapshot({moveCount:moves.length,rumorCount:rumors.length,at:new Date().toLocaleTimeString()});}).catch(()=>fbCopy(code));
+    }else{fbCopy(code);}
+  }
+  function fbCopy(text){
+    try{const ta=document.createElement("textarea");ta.value=text;ta.style.cssText="position:fixed;top:-9999px;left:-9999px;opacity:0;";document.body.appendChild(ta);ta.focus();ta.select();const ok=document.execCommand("copy");document.body.removeChild(ta);if(ok){setCopied(true);setTimeout(()=>setCopied(false),3000);setLastSyncSnapshot({moveCount:moves.length,rumorCount:rumors.length,at:new Date().toLocaleTimeString()});}else setCopied("manual");}catch(e){setCopied("manual");}
+  }  async function selectTeam(teamId){
+    setSelectedTeam(teamId);
+    setShowTeamPicker(false);
+    await wSet(TEAM_STORAGE_KEY,teamId);
+  }
+
+  function pickConsultVoices(){
+    const pool=(TEAM_DATA[selectedTeam]||TEAM_DATA.bulls).voices;
+    const fo=pool.filter(v=>v.type==="fo");
+    const coach=pool.filter(v=>v.type==="coach");
+    const legend=pool.filter(v=>v.type==="legend");
+    function rnd(arr,n){const s=[...arr];for(let i=s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];}return s.slice(0,n);}
+    return [...rnd(fo,Math.min(3,fo.length)),...rnd(coach,Math.min(1,coach.length)),...rnd(legend,Math.min(3,legend.length))];
+  }
+
+  async function submitConsult(){
+    if(!consultNotes.trim()){setConsultErr("Describe the move you are considering.");return;}
+    setConsultLoading(true);setConsultErr(null);setConsultResult(null);
+    try{
+      const voices=pickConsultVoices();
+      const moveCtx=moves.length
+        ? "\n\nRecent moves context: "+moves.slice(0,4).map((m,i)=>((i+1)+". ["+m.moveType+"] "+(m.analysis?.verdict||""))).join(", ")
+        : "";
+      const voiceList=voices.map((v,i)=>((i+1)+". "+v.name+" ("+v.role+")")).join("\n");
+
+
+      const teamName=(TEAM_DATA[selectedTeam]||TEAM_DATA.bulls).name;
+      const playerTierCtx="PLAYER VALUATION FRAMEWORK:\nCONTRACT VALUE: Expiring=high trade value, rookie-scale=gold, max on bad deal=liability.\nPLAYER TIER: S-tier (Wembanyama/Jokic/Giannis/SGA/Luka level), A-tier (All-Star), B-tier (starter), C-tier (rotation), D-tier (fringe). Be accurate.\nMEDIA PERCEPTION: National coverage volume = market value. Superstar gets 50+ articles/week vs fringe player gets 2.\nEXEC STANDARD: What do 20 of 30 GMs think? Call it clearly. No hedging on obvious outcomes.\nRECENCY: Current trajectory beats historical reputation.";
+      const prompt="You are simulating unfiltered private reactions from key "+teamName+" organizational figures evaluating a proposed move in NBA 2K26 franchise mode. Speak authentically as someone associated with that franchise. Do not reference other current real NBA teams or GMs by name.\n\nPROPOSED MOVE: "+consultNotes.trim()+moveCtx+"\n\n"+playerTierCtx+"\n\nVOICES TO SIMULATE (respond for ALL "+voices.length+" in order):\n"+voiceList+"\n\nRESPOND IN THIS EXACT FORMAT using these delimiters precisely, one block per voice:\n\n"+voices.map((v)=>"###VOICE:"+v.name+"\n###QUOTE:2-3 sentences in "+v.name+"s authentic voice reacting to this move").join("\n\n")+"\n\n###VERDICT:2-3 sentences on how the league views this move and its value calculus\n###PUSH:PUSH IT\n###REASON:one sharp sentence explaining the recommendation\n\nFor ###PUSH use exactly one of: PUSH IT, HOLD OFF, PROCEED WITH CAUTION\nBe analytically sharp. Call obvious outcomes clearly. Apply the valuation framework ruthlessly."
+
+      const txt=await callClaude(prompt);
+
+      // Parse the delimited format - completely immune to JSON/apostrophe issues
+      const voices_=voices;
+      const reactions=voices_.map(function(v){
+        const marker="###QUOTE:";
+        const nameMarker="###VOICE:"+v.name;
+        const namePos=txt.indexOf(nameMarker);
+        if(namePos===-1){
+          // Try first name match
+          const firstName=v.name.split(" ")[0];
+          const altPos=txt.indexOf("###VOICE:"+firstName);
+          if(altPos===-1)return{name:v.name,quote:"Re-consult to get this reaction."};
+          const quotePos=txt.indexOf(marker,altPos);
+          if(quotePos===-1)return{name:v.name,quote:"Re-consult to get this reaction."};
+          const quoteStart=quotePos+marker.length;
+          const quoteEnd=txt.indexOf("\n###",quoteStart);
+          return{name:v.name,quote:(quoteEnd===-1?txt.slice(quoteStart):txt.slice(quoteStart,quoteEnd)).trim()};
+        }
+        const quotePos=txt.indexOf(marker,namePos);
+        if(quotePos===-1)return{name:v.name,quote:"Re-consult to get this reaction."};
+        const quoteStart=quotePos+marker.length;
+        const quoteEnd=txt.indexOf("\n###",quoteStart);
+        return{name:v.name,quote:(quoteEnd===-1?txt.slice(quoteStart):txt.slice(quoteStart,quoteEnd)).trim()};
+      });
+
+      const verdictPos=txt.indexOf("###VERDICT:");
+      const pushPos=txt.indexOf("###PUSH:");
+      const reasonPos=txt.indexOf("###REASON:");
+
+      const leagueVerdict=verdictPos!==-1
+        ? txt.slice(verdictPos+11,pushPos!==-1?pushPos:undefined).trim()
+        : "See individual reactions above.";
+      const pushVerdict=pushPos!==-1
+        ? txt.slice(pushPos+8,reasonPos!==-1?reasonPos:undefined).trim().split("\n")[0].toUpperCase()
+        : "PROCEED WITH CAUTION";
+      const pushReason=reasonPos!==-1
+        ? txt.slice(reasonPos+10).trim().split("\n")[0]
+        : "Re-consult for a sharper recommendation.";
+
+      // Normalize pushVerdict to exactly one of three values
+      const pv=pushVerdict.includes("PUSH")&&!pushVerdict.includes("CAUTION")?"PUSH IT":
+               pushVerdict.includes("HOLD")?"HOLD OFF":"PROCEED WITH CAUTION";
+
+      setConsultResult({reactions,leagueVerdict,pushVerdict:pv,pushReason,voices:voices_,notes:consultNotes.trim()});
+    }catch(e){setConsultErr("Consult failed: "+e.message);console.error(e);}
+    finally{setConsultLoading(false);}
+  }
+
+    function loadSyncCode(){
+    setSyncErr(null);
+    let raw=syncPaste.replace(/\s+/g,'');
+    if(raw.includes('#gm:')){raw=raw.split('#gm:')[1]||'';}
+    const d=decode(raw);
+    if(!d){setSyncErr("Invalid code — paste the full Q... sync code.");return;}
+    setMoves(d.m);setRumors(d.r||[]);
+    if(d.m.length)setCur(d.m[0]);
+    persistMoves(d.m);persistRumors(d.r||[]);
+    generateGmSummary(d.m);generateRumorSummary(d.r||[],d.m);
+    // Restore team from sync code
+    if(d.t&&TEAM_DATA[d.t]){
+      // Code carries team - set it directly
+      setSelectedTeam(d.t);
+      wSet(TEAM_STORAGE_KEY,d.t);
+      setSyncPaste("");setSyncOpen(false);
+    }else{
+      // No team in code (old format) - clear stale team and force pick
+      setSelectedTeam(null);
+      wDel(TEAM_STORAGE_KEY);
+      setSyncPaste("");setSyncOpen(false);
+      setShowTeamPicker(true);
+    }
+  }
+
+  if(!ready)return h("div",{style:{display:"flex",height:"100vh",alignItems:"center",justifyContent:"center",color:"#aaa",fontFamily:"Barlow,sans-serif",fontSize:14}},"Loading…");
+
+  return h(Fragment,null,
+
+    /* CHANGE TEAM CONFIRM MODAL */
+    showChangeTeamConfirm&&h("div",{className:"mo",onClick:()=>setShowChangeTeamConfirm(false)},
+      h("div",{className:"md",style:{maxWidth:460},onClick:e=>e.stopPropagation()},
+        h("div",{className:"md-title"},"Switch Teams?"),
+        h("div",{style:{background:"var(--orange-light)",border:"1px solid rgba(192,92,0,0.2)",borderRadius:8,padding:"12px 14px",fontSize:13,color:"var(--orange)",lineHeight:1.7,marginBottom:4}},
+          "⚠ Switching teams will clear your current GM log and start a fresh session.",
+          h("br",null),h("br",null),
+          "Think of each sync code as a separate save file — one per team. Copy your sync code first so you can return to this session later."),
+        h("div",{style:{fontSize:13,color:"var(--tx2)",lineHeight:1.7}},
+          "Your current session: ",h("strong",null,moves.length+" moves · "+(TEAM_DATA[selectedTeam]||TEAM_DATA.bulls).name)),
+        h("div",{className:"md-actions",style:{flexDirection:"column",gap:8}},
+          h("button",{
+            className:"md-btn",
+            style:{background:"var(--nba)",width:"100%"},
+            onClick:()=>{setSyncOpen(true);setShowChangeTeamConfirm(false);setPendingTeamSwitch(true);}
+          },"Copy Sync Code First — then switch"),
+          h("button",{className:"md-btn sec",onClick:()=>setShowChangeTeamConfirm(false)},"Cancel — stay on current team")))),
+
+    /* TEAM PICKER MODAL */
+    showTeamPicker&&h("div",{className:"mo",onClick:()=>selectedTeam&&setShowTeamPicker(false)},
+      h("div",{className:"md",style:{maxWidth:580,maxHeight:"85vh"},onClick:e=>e.stopPropagation()},
+        h("div",{className:"md-title"},"Choose Your Team"),
+        h("div",{style:{fontSize:13,color:"var(--tx2)",lineHeight:1.7,marginBottom:4}},
+          "Your team sets the org voices in Consult and your row in Power Rankings. If you have a sync code from a previous session, paste it below to skip this step and restore your full log."),
+        h("div",{style:{display:"flex",gap:8,marginBottom:10}},
+          h("input",{
+            id:"picker-sync-input",
+            placeholder:"Paste sync code here to restore a previous session...",
+            style:{flex:1,fontFamily:"IBM Plex Mono,monospace",fontSize:11,padding:"8px 10px",border:"1.5px solid var(--bd2)",borderRadius:7,background:"var(--bg)",color:"var(--tx)"}
+          }),
+          h("button",{
+            className:"md-btn",
+            style:{flexShrink:0,fontSize:13,padding:"8px 14px"},
+            onClick:function(){
+              const raw=(document.getElementById("picker-sync-input")||{}).value||"";
+              if(!raw.trim())return;
+              let code=raw.replace(/\s+/g,"");
+              if(code.includes("#gm:")){code=code.split("#gm:")[1]||"";}
+              const d=decode(code);
+              if(!d||!d.m.length){alert("Invalid sync code — check and try again.");return;}
+              setMoves(d.m);setRumors(d.r||[]);
+              if(d.m.length)setCur(d.m[0]);
+              persistMoves(d.m);persistRumors(d.r||[]);
+              // Auto-detect team from storage or default to bulls
+              // After restoring data, keep team picker open so user can pick their team
+              // (sync code may not have team if from old format)
+              // Show picker with data already loaded
+              setShowTeamPicker(true);
+            }
+          },"Restore")),
+        h("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,overflowY:"auto",maxHeight:420}},
+          h("button",{key:"bulls",onClick:()=>selectTeam("bulls"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="bulls"?700:500,padding:"8px 10px",background:selectedTeam==="bulls"?"var(--nba)":"var(--surface)",color:selectedTeam==="bulls"?"#fff":"var(--tx2)",border:selectedTeam==="bulls"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Chicago Bulls"),h("button",{key:"celtics",onClick:()=>selectTeam("celtics"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="celtics"?700:500,padding:"8px 10px",background:selectedTeam==="celtics"?"var(--nba)":"var(--surface)",color:selectedTeam==="celtics"?"#fff":"var(--tx2)",border:selectedTeam==="celtics"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Boston Celtics"),h("button",{key:"nets",onClick:()=>selectTeam("nets"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="nets"?700:500,padding:"8px 10px",background:selectedTeam==="nets"?"var(--nba)":"var(--surface)",color:selectedTeam==="nets"?"#fff":"var(--tx2)",border:selectedTeam==="nets"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Brooklyn Nets"),h("button",{key:"knicks",onClick:()=>selectTeam("knicks"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="knicks"?700:500,padding:"8px 10px",background:selectedTeam==="knicks"?"var(--nba)":"var(--surface)",color:selectedTeam==="knicks"?"#fff":"var(--tx2)",border:selectedTeam==="knicks"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"New York Knicks"),h("button",{key:"sixers",onClick:()=>selectTeam("sixers"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="sixers"?700:500,padding:"8px 10px",background:selectedTeam==="sixers"?"var(--nba)":"var(--surface)",color:selectedTeam==="sixers"?"#fff":"var(--tx2)",border:selectedTeam==="sixers"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Philadelphia 76ers"),h("button",{key:"raptors",onClick:()=>selectTeam("raptors"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="raptors"?700:500,padding:"8px 10px",background:selectedTeam==="raptors"?"var(--nba)":"var(--surface)",color:selectedTeam==="raptors"?"#fff":"var(--tx2)",border:selectedTeam==="raptors"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Toronto Raptors"),h("button",{key:"cavaliers",onClick:()=>selectTeam("cavaliers"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="cavaliers"?700:500,padding:"8px 10px",background:selectedTeam==="cavaliers"?"var(--nba)":"var(--surface)",color:selectedTeam==="cavaliers"?"#fff":"var(--tx2)",border:selectedTeam==="cavaliers"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Cleveland Cavaliers"),h("button",{key:"pistons",onClick:()=>selectTeam("pistons"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="pistons"?700:500,padding:"8px 10px",background:selectedTeam==="pistons"?"var(--nba)":"var(--surface)",color:selectedTeam==="pistons"?"#fff":"var(--tx2)",border:selectedTeam==="pistons"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Detroit Pistons"),h("button",{key:"pacers",onClick:()=>selectTeam("pacers"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="pacers"?700:500,padding:"8px 10px",background:selectedTeam==="pacers"?"var(--nba)":"var(--surface)",color:selectedTeam==="pacers"?"#fff":"var(--tx2)",border:selectedTeam==="pacers"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Indiana Pacers"),h("button",{key:"bucks",onClick:()=>selectTeam("bucks"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="bucks"?700:500,padding:"8px 10px",background:selectedTeam==="bucks"?"var(--nba)":"var(--surface)",color:selectedTeam==="bucks"?"#fff":"var(--tx2)",border:selectedTeam==="bucks"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Milwaukee Bucks"),h("button",{key:"hawks",onClick:()=>selectTeam("hawks"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="hawks"?700:500,padding:"8px 10px",background:selectedTeam==="hawks"?"var(--nba)":"var(--surface)",color:selectedTeam==="hawks"?"#fff":"var(--tx2)",border:selectedTeam==="hawks"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Atlanta Hawks"),h("button",{key:"hornets",onClick:()=>selectTeam("hornets"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="hornets"?700:500,padding:"8px 10px",background:selectedTeam==="hornets"?"var(--nba)":"var(--surface)",color:selectedTeam==="hornets"?"#fff":"var(--tx2)",border:selectedTeam==="hornets"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Charlotte Hornets"),h("button",{key:"heat",onClick:()=>selectTeam("heat"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="heat"?700:500,padding:"8px 10px",background:selectedTeam==="heat"?"var(--nba)":"var(--surface)",color:selectedTeam==="heat"?"#fff":"var(--tx2)",border:selectedTeam==="heat"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Miami Heat"),h("button",{key:"magic",onClick:()=>selectTeam("magic"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="magic"?700:500,padding:"8px 10px",background:selectedTeam==="magic"?"var(--nba)":"var(--surface)",color:selectedTeam==="magic"?"#fff":"var(--tx2)",border:selectedTeam==="magic"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Orlando Magic"),h("button",{key:"wizards",onClick:()=>selectTeam("wizards"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="wizards"?700:500,padding:"8px 10px",background:selectedTeam==="wizards"?"var(--nba)":"var(--surface)",color:selectedTeam==="wizards"?"#fff":"var(--tx2)",border:selectedTeam==="wizards"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Washington Wizards"),h("button",{key:"nuggets",onClick:()=>selectTeam("nuggets"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="nuggets"?700:500,padding:"8px 10px",background:selectedTeam==="nuggets"?"var(--nba)":"var(--surface)",color:selectedTeam==="nuggets"?"#fff":"var(--tx2)",border:selectedTeam==="nuggets"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Denver Nuggets"),h("button",{key:"timberwolves",onClick:()=>selectTeam("timberwolves"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="timberwolves"?700:500,padding:"8px 10px",background:selectedTeam==="timberwolves"?"var(--nba)":"var(--surface)",color:selectedTeam==="timberwolves"?"#fff":"var(--tx2)",border:selectedTeam==="timberwolves"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Minnesota Timberwolves"),h("button",{key:"thunder",onClick:()=>selectTeam("thunder"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="thunder"?700:500,padding:"8px 10px",background:selectedTeam==="thunder"?"var(--nba)":"var(--surface)",color:selectedTeam==="thunder"?"#fff":"var(--tx2)",border:selectedTeam==="thunder"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Oklahoma City Thunder"),h("button",{key:"blazers",onClick:()=>selectTeam("blazers"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="blazers"?700:500,padding:"8px 10px",background:selectedTeam==="blazers"?"var(--nba)":"var(--surface)",color:selectedTeam==="blazers"?"#fff":"var(--tx2)",border:selectedTeam==="blazers"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Portland Trail Blazers"),h("button",{key:"jazz",onClick:()=>selectTeam("jazz"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="jazz"?700:500,padding:"8px 10px",background:selectedTeam==="jazz"?"var(--nba)":"var(--surface)",color:selectedTeam==="jazz"?"#fff":"var(--tx2)",border:selectedTeam==="jazz"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Utah Jazz"),h("button",{key:"warriors",onClick:()=>selectTeam("warriors"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="warriors"?700:500,padding:"8px 10px",background:selectedTeam==="warriors"?"var(--nba)":"var(--surface)",color:selectedTeam==="warriors"?"#fff":"var(--tx2)",border:selectedTeam==="warriors"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Golden State Warriors"),h("button",{key:"clippers",onClick:()=>selectTeam("clippers"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="clippers"?700:500,padding:"8px 10px",background:selectedTeam==="clippers"?"var(--nba)":"var(--surface)",color:selectedTeam==="clippers"?"#fff":"var(--tx2)",border:selectedTeam==="clippers"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Los Angeles Clippers"),h("button",{key:"lakers",onClick:()=>selectTeam("lakers"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="lakers"?700:500,padding:"8px 10px",background:selectedTeam==="lakers"?"var(--nba)":"var(--surface)",color:selectedTeam==="lakers"?"#fff":"var(--tx2)",border:selectedTeam==="lakers"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Los Angeles Lakers"),h("button",{key:"suns",onClick:()=>selectTeam("suns"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="suns"?700:500,padding:"8px 10px",background:selectedTeam==="suns"?"var(--nba)":"var(--surface)",color:selectedTeam==="suns"?"#fff":"var(--tx2)",border:selectedTeam==="suns"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Phoenix Suns"),h("button",{key:"kings",onClick:()=>selectTeam("kings"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="kings"?700:500,padding:"8px 10px",background:selectedTeam==="kings"?"var(--nba)":"var(--surface)",color:selectedTeam==="kings"?"#fff":"var(--tx2)",border:selectedTeam==="kings"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Sacramento Kings"),h("button",{key:"mavericks",onClick:()=>selectTeam("mavericks"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="mavericks"?700:500,padding:"8px 10px",background:selectedTeam==="mavericks"?"var(--nba)":"var(--surface)",color:selectedTeam==="mavericks"?"#fff":"var(--tx2)",border:selectedTeam==="mavericks"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Dallas Mavericks"),h("button",{key:"rockets",onClick:()=>selectTeam("rockets"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="rockets"?700:500,padding:"8px 10px",background:selectedTeam==="rockets"?"var(--nba)":"var(--surface)",color:selectedTeam==="rockets"?"#fff":"var(--tx2)",border:selectedTeam==="rockets"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Houston Rockets"),h("button",{key:"grizzlies",onClick:()=>selectTeam("grizzlies"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="grizzlies"?700:500,padding:"8px 10px",background:selectedTeam==="grizzlies"?"var(--nba)":"var(--surface)",color:selectedTeam==="grizzlies"?"#fff":"var(--tx2)",border:selectedTeam==="grizzlies"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"Memphis Grizzlies"),h("button",{key:"pelicans",onClick:()=>selectTeam("pelicans"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="pelicans"?700:500,padding:"8px 10px",background:selectedTeam==="pelicans"?"var(--nba)":"var(--surface)",color:selectedTeam==="pelicans"?"#fff":"var(--tx2)",border:selectedTeam==="pelicans"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"New Orleans Pelicans"),h("button",{key:"spurs",onClick:()=>selectTeam("spurs"),style:{fontFamily:"'Barlow',sans-serif",fontSize:12,fontWeight:selectedTeam==="spurs"?700:500,padding:"8px 10px",background:selectedTeam==="spurs"?"var(--nba)":"var(--surface)",color:selectedTeam==="spurs"?"#fff":"var(--tx2)",border:selectedTeam==="spurs"?"1.5px solid var(--nba)":"1.5px solid var(--bd)",borderRadius:6,cursor:"pointer",textAlign:"left",lineHeight:1.3}},"San Antonio Spurs")),
+        selectedTeam&&h("div",{className:"md-actions",style:{marginTop:8}},
+          h("button",{className:"md-btn",onClick:()=>setShowTeamPicker(false)},"Confirm — "+( TEAM_DATA[selectedTeam]||TEAM_DATA.bulls).name)))),
+
+        syncOpen&&h("div",{className:"mo",onClick:()=>setSyncOpen(false)},
+      h("div",{className:"md",onClick:e=>e.stopPropagation()},
+        h("div",{className:"md-title"},"Sync Code"),
+        h("div",{style:{fontSize:13,color:"var(--tx2)",lineHeight:1.7}},"Copy the full sync code below, then paste it on any device to restore all your moves and rumors."),
+        hasUnsyncedChanges&&(moves.length>0||rumors.length>0)&&h("div",{style:{fontSize:12,color:"#C8102E",background:"#fce8eb",border:"1px solid rgba(200,16,46,0.2)",borderRadius:7,padding:"9px 12px",lineHeight:1.6,display:"flex",gap:8,alignItems:"flex-start"}},
+          h("span",{style:{fontSize:14,flexShrink:0}},"⚠"),
+          h("span",null,"Your sync code is out of date — you have unsaved changes. Copy a fresh code now before closing this session or updating the artifact.")),
+        !hasUnsyncedChanges&&lastSyncSnapshot&&h("div",{style:{fontSize:12,color:"#15803D",background:"#F0FAF4",border:"1px solid rgba(21,128,61,0.2)",borderRadius:7,padding:"8px 12px"}},
+          "✓ Sync code is current · Last copied at "+lastSyncSnapshot.at+" ("+lastSyncSnapshot.moveCount+" moves, "+lastSyncSnapshot.rumorCount+" rumors)"),
+        moves.length>0&&h(Fragment,null,
+          h("textarea",{
+            readOnly:true,
+            value:encode(moves,rumors)||"",
+            onClick:function(e){e.target.select();},
+            style:{fontFamily:"IBM Plex Mono,monospace",fontSize:11,color:"var(--tx2)",background:"var(--surface)",border:"1px solid var(--bd)",borderRadius:8,padding:"12px",width:"100%",height:140,resize:"none",cursor:"text",lineHeight:1.5}
+          }),
+          h("button",{
+            className:"md-btn",
+            style:{width:"100%",background:copied===true?"#15803D":"#1D428A"},
+            onClick:copySyncCode
+          },copied===true?"✓ Copied!":copied==="manual"?"Select code above — copy manually":"Copy Sync Code")),
+        moves.length===0&&h("div",{style:{fontSize:13,color:"var(--mu)",padding:"4px 0"}},"No moves logged yet — nothing to export."),
+        h("hr",{className:"md-sep"}),
+        h("div",{style:{fontFamily:"IBM Plex Mono,monospace",fontSize:10,color:"var(--mu)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}},"Restore from sync code"),
+        h("textarea",{value:syncPaste,onChange:e=>setSyncPaste(e.target.value),placeholder:"Paste your full sync code here to restore all logs…",rows:5,style:{fontFamily:"IBM Plex Mono,monospace",fontSize:11,width:"100%",border:"1.5px solid var(--bd2)",borderRadius:8,padding:"12px",resize:"none",background:"#fff"}}),
+        syncErr&&h("p",{style:{fontSize:12,color:"#C8102E",marginTop:4}},syncErr),
+        h("div",{className:"md-actions",style:{marginTop:8}},
+          h("button",{className:"md-btn",onClick:loadSyncCode,disabled:!syncPaste.trim()},"Restore Logs"),
+          h("button",{className:"md-btn sec",onClick:()=>{setSyncOpen(false);setSyncPaste("");setSyncErr(null);if(pendingTeamSwitch){setPendingTeamSwitch(false);setShowTeamPicker(false);setShowChangeTeamConfirm(true);}}},"Close")),
+        h("div",{style:{fontSize:11,color:"var(--mu)",lineHeight:1.6,padding:"8px 0 0"}},
+          "💡 Each time the artifact is updated, cloud save resets. Always copy a fresh sync code before sessions end or artifact updates."))),
+
+    shareLoaded&&h("div",{style:{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"#15803D",color:"#fff",textAlign:"center",padding:"12px 16px",fontFamily:"Barlow,sans-serif",fontSize:14,fontWeight:600}},"✓ GM log loaded successfully"),
+
+    h("div",{className:"topbar"},
+      h("div",{className:"topbar-left"},h("div",{className:"nba-badge"},"NBA 2K26"),h("div",{className:"topbar-title"},"GM Grader Tool")),
+      h("div",{className:"topbar-right"},
+        h("span",{className:"topbar-chip",style:HWS?{background:"rgba(21,128,61,0.2)",borderColor:"rgba(21,128,61,0.4)",color:"#86efac"}:{background:"rgba(200,16,46,0.18)",borderColor:"rgba(200,16,46,0.3)",color:"#fca5a5"}},h("span",{className:"status-dot",style:{background:HWS?"#4ade80":"#f87171"}}),HWS?"Cloud save":"No cloud save"),
+        h("button",{
+          className:"topbar-chip sync",
+          onClick:()=>setSyncOpen(true),
+          style:hasUnsyncedChanges&&(moves.length>0||rumors.length>0)?{background:"rgba(200,16,46,0.25)",borderColor:"rgba(200,16,46,0.5)"}:{}
+        },
+        h(Fragment,null,
+          hasUnsyncedChanges&&(moves.length>0||rumors.length>0)&&h("span",{style:{width:6,height:6,borderRadius:"50%",background:"#f87171",display:"inline-block",marginRight:3}}),
+          "⇄ Sync Code"+(moves.length>0?" ("+moves.length+")":""))),
+        h("button",{
+          className:"topbar-chip",
+          onClick:()=>{if(moves.length>0){setShowTeamPicker(false);setShowChangeTeamConfirm(true);}else{setShowChangeTeamConfirm(false);setShowTeamPicker(true);}},
+          style:{background:"rgba(255,255,255,0.08)",borderColor:"rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.7)",fontSize:10}
+        },(TEAM_DATA[selectedTeam]||TEAM_DATA.bulls).name.split(" ").slice(-1)[0]+" ▾"),
+        saveOk==="ok"&&h("span",{style:{fontFamily:"IBM Plex Mono,monospace",fontSize:10,color:"#86efac"}},"✓ Saved"),
+        saveOk==="fail"&&h("span",{style:{fontFamily:"IBM Plex Mono,monospace",fontSize:10,color:"#fca5a5"}},"Save failed"))),
+
+    h("div",{className:"wrap"},
+      overallGrade&&h("div",{style:{display:"flex",justifyContent:"flex-end",marginBottom:16}},
+        h("div",{className:"grade-hdr"},
+          h("div",{className:"grade-hdr-label"},"Avg GM Grade"),
+          h(Pill,{grade:overallGrade,size:"lg"}))),
+
+      h("div",{className:"tabs"},
+        h("button",{className:"tab"+(tab==="input"?" on":""),onClick:()=>setTab("input")},"New Move"),
+        cur&&h("button",{className:"tab"+(tab==="result"?" on":""),onClick:()=>setTab("result")},"Last Analysis"),
+        moves.length>0&&h("button",{className:"tab"+(tab==="log"?" on":""),onClick:()=>setTab("log")},`GM Log (${moves.length})`),
+        h("button",{className:"tab"+(tab==="rumors"?" on":""),onClick:()=>setTab("rumors")},`Rumors${rumors.length?` (${rumors.length})`:""}`),
+        h("button",{className:"tab"+(tab==="consult"?" on":""),onClick:()=>setTab("consult")},"Consult"),
+        h("button",{className:"tab"+(tab==="rankings"?" on":""),onClick:()=>setTab("rankings")},`Power Rankings${moves.length?` · #${userRank}`:""}`)),
+
+      tab==="input"&&h("div",{className:"input-area"},
+        h("div",null,h("div",{className:"fl"},"GM Notes"),h("textarea",{value:notes,onChange:e=>setNotes(e.target.value),placeholder:"Just write what happened — the move, reasoning, cap situation, what you gave up, what you got. No formatting needed.",rows:9})),
+        rumors.length>0&&h("div",{className:"hint"},`${rumors.length} active rumor${rumors.length!==1?"s":""} will be included as analysis context.`),
+        !HWS&&h("div",{className:"warn-box"},"Cloud save unavailable. Use ⇄ Sync Code to save and restore your progress."),
+        err&&h("p",{className:"errmsg"},err),
+        h("div",{className:"srow"},h("button",{className:"sbtn",disabled:loading,onClick:submit},loading?"Analyzing…":"Analyze Move"),loading&&h("span",{className:"pulsing"},"Calling the film room…"))),
+
+      tab==="result"&&cur&&h("div",{className:"result"},
+        h("div",{className:"card-shadow"},
+          h("span",{className:"mtag"},cur.moveType),
+          h("p",{style:{marginTop:10,fontSize:14,color:"#3A3D4A",lineHeight:1.75}},cur.notes.length>300?cur.notes.slice(0,300)+"…":cur.notes),
+          h("div",{style:{fontFamily:"IBM Plex Mono,monospace",fontSize:10,color:"#A0A4B4",marginTop:10}},cur.timestamp)),
+        h("div",{className:"vcard"},h("div",{className:"clabel"},"Verdict"),h("div",{className:"vtext"},cur.analysis.verdict)),
+        h("div",{className:"grow"},
+          h("div",{className:"gbox"},h("div",{className:"clabel"},"Realism"),h("div",{className:"gval",style:{color:gc(cur.analysis.tradeRealism?.grade)}},cur.analysis.tradeRealism?.grade||"—")),
+          h("div",{className:"gbox"},h("div",{className:"clabel"},"GM Decision"),h("div",{className:"gval",style:{color:gc(cur.analysis.gmGrade?.grade)}},cur.analysis.gmGrade?.grade||"—"))),
+        h("div",{className:"tcol"},
+          h("div",{className:"card"},h("div",{className:"clabel"},"Realism breakdown"),h("p",null,cur.analysis.tradeRealism?.summary)),
+          h("div",{className:"card"},h("div",{className:"clabel"},"GM assessment"),h("p",null,cur.analysis.gmGrade?.summary))),
+        h("div",{className:"capcard"},h("div",{className:"caplabel"},"Cap Implications"),h("p",null,cur.analysis.capAnalysis)),
+        h("div",{className:"rgrid"},
+          h("div",null,h("div",{className:"rgl"},h("div",{className:"dot",style:{background:NBA_RED}}),h("span",{style:{color:NBA_RED}},"Chicago Bulls")),cur.analysis.bullsReactions?.map((r,i)=>h("div",{key:i,className:"icard",style:{borderColor:NBA_RED}},h("div",{className:"iwho"},h("span",{className:"iname"},r.insider),h("span",{className:"ipub"},r.publication)),h("p",{className:"iq"},'"'+r.reaction+'"')))),
+          h("div",null,h("div",{className:"rgl"},h("div",{className:"dot",style:{background:NBA_BLUE}}),h("span",{style:{color:NBA_BLUE}},"League")),cur.analysis.otherTeamReactions?.map((r,i)=>h("div",{key:i,className:"icard",style:{borderColor:NBA_BLUE}},h("div",{className:"iwho"},h("span",{className:"iname"},r.insider),h("span",{className:"ipub"},r.publication)),h("p",{className:"iq"},'"'+r.reaction+'"'))))),
+        h("div",{className:"ractions"},
+          h("button",{className:"gbtn",onClick:()=>setTab("input")},"+ New Move"),
+          h("button",{className:"gbtn danger"+(delConfirm===cur.id?" conf":""),onClick:()=>deleteMove(cur.id,null)},delConfirm===cur.id?"Confirm delete":"Delete this move"))),
+
+      tab==="log"&&h("div",{className:"log"},
+        h("div",{className:"ai-summary"},
+          h("div",{className:"ai-summary-label"},h("span",null,"◈"),"GM Summary",summLoading&&h("span",{className:"ai-summary-loading"}," Updating…")),
+          summLoading&&!gmSummary?h("div",{className:"ai-summary-loading"},"Generating summary…"):gmSummary?h(Fragment,null,h("div",{className:"ai-summary-text"},gmSummary),h("div",{className:"ai-summary-stale"},"Based on last "+Math.min(moves.length,5)+" moves")):h("div",{className:"ai-summary-loading"},"Log a move to generate a summary.")),
+        moves.length>0&&h("div",{className:"lsummary"},
+          h("div",{className:"lstats"},h("div",{className:"lstat"},"Moves",h("span",null,moves.length)),h("div",{className:"lstat"},"Avg GM Grade",h("span",null,h(Pill,{grade:overallGrade}))),h("div",{className:"lstat"},"Avg Realism",h("span",null,h(Pill,{grade:s2g(avgReal)})))),
+          overallGrade&&h(Pill,{grade:overallGrade,size:"lg"})),
+        moves.length===0&&h("div",{className:"empty-state"},"No moves logged yet."),
+        moves.map(m=>h("div",{key:m.id,className:"litem"+(cur?.id===m.id?" active":""),onClick:()=>{setCur(m);setTab("result");setDelConfirm(null);}},
+          h("div",{className:"litop"},
+            h("div",{style:{flex:1,minWidth:0}},
+              h("div",{className:"lmeta"},h("span",{className:"ltype"},m.moveType),h("span",{className:"lts"},m.timestamp)),
+              h("div",{className:"lnotes"},m.notes),
+              h("div",{className:"lverdict"},m.analysis.verdict)),
+            h("div",{className:"lright"},
+              h("div",{className:"lgrades"},h("div",null,h("div",{className:"gml"},"Realism"),h(Pill,{grade:m.analysis.tradeRealism?.grade})),h("div",null,h("div",{className:"gml"},"GM"),h(Pill,{grade:m.analysis.gmGrade?.grade}))),
+              h("button",{className:"delbtn"+(delConfirm===m.id?" conf":""),onClick:ev=>deleteMove(m.id,ev),title:"Delete"},delConfirm===m.id?"confirm":"✕"))))),
+        showImport&&h("div",{className:"ibox"},
+          h("div",{style:{fontSize:12,color:"#aaa",marginBottom:8}},"Paste exported JSON. Duplicates skipped."),
+          h("textarea",{value:importTxt,onChange:e=>setImportTxt(e.target.value),placeholder:'[{"id":...}]',rows:4,style:{fontFamily:"IBM Plex Mono,monospace",fontSize:12}}),
+          importErr&&h("p",{style:{color:"#C8102E",fontSize:12,marginTop:6}},importErr),
+          h("div",{style:{display:"flex",gap:8,marginTop:10}},h("button",{className:"sbtn",style:{fontSize:14,padding:"9px 18px"},onClick:importLog},"Import"),h("button",{className:"gbtn",onClick:()=>{setShowImport(false);setImportErr(null);setImportTxt("");}  },"Cancel"))),
+        h("div",{className:"lfooter"},
+          h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},h("button",{className:"lbtn",onClick:exportExcel},"Export → Excel"),h("button",{className:"lbtn",onClick:()=>setShowImport(!showImport)},"Import JSON"),h("button",{className:"lbtn",style:{color:"#6D28D9",borderColor:"rgba(109,40,217,0.3)"},onClick:()=>setSyncOpen(true)},"⇄ Sync Code")),
+          h("button",{className:"lbtn",style:confirmClear?{color:"#C8102E",borderColor:"rgba(200,16,46,0.35)"}:{color:"#aaa"},onClick:clearAll},confirmClear?"Confirm — clear all":"Clear all"))),
+
+      tab==="rumors"&&h("div",{className:"rums"},
+        h("div",{className:"ai-summary"},
+          h("div",{className:"ai-summary-label"},h("span",null,"◈"),"Situation Room",rumSummLoading&&h("span",{className:"ai-summary-loading"}," Updating…")),
+          rumSummLoading&&!rumorSummary?h("div",{className:"ai-summary-loading"},"Generating summary…"):rumorSummary?h(Fragment,null,h("div",{className:"ai-summary-text"},rumorSummary),h("div",{className:"ai-summary-stale"},"Based on last "+Math.min(rumors.length,5)+" rumors")):h("div",{className:"ai-summary-loading"},"Add a rumor to generate a situation room summary.")),
+        h("div",{className:"card-shadow"},
+          h("div",{className:"rumhdr"},h("div",{className:"clabel",style:{margin:0}},"Add Intel / Rumor"),rumors.length>0&&h("span",{className:"rumbadge"},`${rumors.length} active`)),
+          h("p",{style:{fontSize:12,color:"#717485",marginBottom:12,lineHeight:1.7}},"Rumors saved here feed into your next move analysis as context — insiders will react to them."),
+          h("textarea",{value:rumorTxt,onChange:e=>setRumorTxt(e.target.value),placeholder:"e.g. Sources say Bulls are targeting a Zach LaVine buyout to clear cap space for a max contract this summer…",rows:4}),
+          h("div",{style:{marginTop:12}},h("button",{className:"sbtn",style:{fontSize:14,padding:"10px 22px"},onClick:saveRumor,disabled:!rumorTxt.trim()},"Save Rumor"))),
+        rumors.map(r=>h("div",{key:r.id,className:"rumitem"},h("div",null,h("div",{className:"rumtext"},r.text),h("div",{style:{fontFamily:"IBM Plex Mono,monospace",fontSize:10,color:"#A0A4B4",marginTop:6}},r.timestamp)),h("button",{className:"delbtn",onClick:()=>deleteRumor(r.id),title:"Delete"},"✕"))),
+        rumors.length===0&&h("div",{className:"empty-state"},"No active rumors. Add intel above.")),
+
+      tab==="consult"&&h("div",{className:"consult"},
+
+        /* Input */
+        h("div",{className:"card-shadow"},
+          h("div",{className:"fl"},"Move you're considering"),
+          h("p",{style:{fontSize:12,color:"var(--mu)",lineHeight:1.7,marginBottom:12}},"Describe the move with player names, salaries, and contract context. The model analyzes player tier, contract value, and market perception — then gives you unfiltered reactions from org figures and a verdict based on actual risk/reward calculus."),
+          h("textarea",{
+            value:consultNotes,onChange:e=>setConsultNotes(e.target.value),
+            placeholder:"e.g. Thinking of trading Coby White to the Knicks for picks and Deuce McBride to create cap space for a max FA this summer…",
+            rows:6
+          }),
+          consultErr&&h("p",{className:"errmsg",style:{marginTop:10}},consultErr),
+          h("div",{className:"srow",style:{marginTop:12}},
+            h("button",{className:"sbtn",disabled:consultLoading,onClick:submitConsult},consultLoading?"Consulting…":"Consult Org"),
+            consultLoading&&h("span",{className:"pulsing"},"Running the valuation…"))),
+
+        /* Result */
+        consultResult&&h(Fragment,null,
+
+          /* Verdict banner */
+          h("div",{className:"consult-verdict"},
+            h("div",{className:"consult-verdict-label"},h("span",null,"◈"),"Org Verdict"),
+            h("div",{className:"consult-verdict-text"},consultResult.leagueVerdict),
+            h("div",{className:"consult-push"},
+              h("span",{className:consultResult.pushVerdict==="PUSH IT"?"push-yes":consultResult.pushVerdict==="HOLD OFF"?"push-no":"push-mixed"},consultResult.pushVerdict),
+              h("span",{style:{fontSize:13,color:"rgba(255,255,255,0.8)",lineHeight:1.5}},consultResult.pushReason))),
+
+          /* Section: Front Office & Coaches */
+          h("div",{style:{fontFamily:"IBM Plex Mono,monospace",fontSize:10,color:"var(--mu)",textTransform:"uppercase",letterSpacing:"0.1em",marginTop:4}},"From the Org"),
+          consultResult.voices&&consultResult.reactions&&consultResult.voices.filter(v=>v.type!=="legend").map((voice,i)=>{
+            const reaction=consultResult.reactions.find(r=>r.name===voice.name);
+            if(!reaction)return null;
+            return h("div",{key:i,className:"consult-card"},
+              h("div",{className:"consult-avatar"},voice.emoji),
+              h("div",{className:"consult-body"},
+                h("div",{className:"consult-who"},
+                  h("span",{className:"consult-name"},voice.name),
+                  h("span",{className:"consult-role"},voice.role)),
+                h("div",{className:"consult-quote"},'"'+reaction.quote+'"')));
+          }),
+
+          /* Section: Legends */
+          h("div",{style:{fontFamily:"IBM Plex Mono,monospace",fontSize:10,color:"var(--mu)",textTransform:"uppercase",letterSpacing:"0.1em",marginTop:4}},"Legends"),
+          consultResult.voices&&consultResult.reactions&&consultResult.voices.filter(v=>v.type==="legend").map((voice,i)=>{
+            const reaction=consultResult.reactions.find(r=>r.name===voice.name);
+            if(!reaction)return null;
+            return h("div",{key:i,className:"consult-card",style:{borderLeft:"3px solid var(--nba)"}},
+              h("div",{className:"consult-avatar",style:{background:"var(--nba-light)",borderColor:"var(--nba)"}},voice.emoji),
+              h("div",{className:"consult-body"},
+                h("div",{className:"consult-who"},
+                  h("span",{className:"consult-name"},voice.name),
+                  h("span",{className:"consult-role"},voice.role)),
+                h("div",{className:"consult-quote"},'"'+reaction.quote+'"')));
+          }),
+
+          /* New consult button */
+          h("button",{className:"gbtn",style:{alignSelf:"flex-start"},onClick:()=>{setConsultResult(null);setConsultNotes("");}  },"Consult on a different move"))),
+
+      tab==="rankings"&&h("div",{className:"pr"},
+        h("div",{className:"pr-hdr"},
+          h("div",{className:"pr-hl"},h("div",{className:"pr-htitle"},"NBA GM Power Rankings"),h("div",{className:"pr-hsub"},"Rank updates on each move · Based on avg GM grade")),
+          moves.length>0&&h("div",{className:"pr-rbadge"},
+            h("div",null,h("div",{className:"pr-rlabel"},"Your Rank"),h("div",{className:"pr-rnum"},"#"+userRank),h("div",{className:"pr-rdelta",style:{color:rankDelta>0?"#4ade80":rankDelta<0?"#f87171":"rgba(255,255,255,0.5)"}},rankDelta>0?"▲ "+rankDelta:rankDelta<0?"▼ "+Math.abs(rankDelta):"— unchanged")),
+            h("div",null,h("div",{className:"pr-rlabel"},"Avg Grade"),h(Pill,{grade:overallGrade,size:"lg"})))),
+        moves.length===0&&h("div",{className:"empty-state",style:{marginBottom:16}},"Log your first move to enter the power rankings."),
+        h("div",{className:"pr-thead"},h("div",{className:"pr-th"},"Rank"),h("div",{className:"pr-th"},"±"),h("div",{className:"pr-th"},"GM / Front Office"),h("div",{className:"pr-th",style:{textAlign:"center"}},"Press"),h("div",{className:"pr-th",style:{textAlign:"right"}},"Grade")),
+        h("div",{className:"pr-body"},
+          ranked.map((gm,i)=>{
+            const rank=i+1;const grade=gm.isUser?overallGrade:s2g(gm.score);
+            return h("div",{key:gm.isUser?"user":gm.name,className:"pr-row"+(gm.isUser?" ur":"")},
+              h("div",{className:"pr-rank-n"+(rank<=3?" t3":"")+(gm.isUser?" u":"")},rank<=3?"#"+rank:""+rank),
+              h("div",{className:"pr-dt"},gm.isUser&&rankDelta!==0?h("span",{style:{color:rankDelta>0?"#15803D":"#C8102E"}},rankDelta>0?"▲":"▼"):h("span",{style:{color:"#CFD3DC"}},"—")),
+              h("div",{className:"pr-gm"},h("div",{className:"pr-gmn"+(gm.isUser?" u":"")},gm.isUser?"► YOU — "+(TEAM_DATA[selectedTeam]||TEAM_DATA.bulls).name+" GM":gm.name),h("div",{className:"pr-gmt"},(gm.isUser?(TEAM_DATA[selectedTeam]||TEAM_DATA.bulls).name:(gm.team+" · "+gm.title)))),
+              h("div",{className:"pr-press"},pressDots(gm.articles||50)),
+              h("div",{className:"pr-g"},grade?h(Pill,{grade}):h("span",{style:{color:"#CFD3DC",fontFamily:"IBM Plex Mono,monospace",fontSize:11}},"—")));
+          })))
+    )
+  );
+}
+ReactDOM.render(h(App),document.getElementById("root"));
+</script>
+</body>
+</html>
