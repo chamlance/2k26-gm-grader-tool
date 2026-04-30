@@ -2,9 +2,9 @@
 
 ## The Problem
 
-NBA 2K2k MyLeague / franchise gives you all the tools of a real GM — trades, signings, extensions, draft picks, cap management — but zero feedback on whether your decisions are actually good.
+NBA 2K26 MyLeague / franchise gives you all the tools of a real GM — trades, signings, extensions, draft picks, cap management — but zero feedback on whether your decisions are actually good.
 
-You can trade away a first-round pick for a player on a max contract with two years left and the game will let you do it without blinking (espeically with trade override). There's no mechanism that tells you: *this is an overpay, 28 out of 30 real GMs would reject this, and your cap situation in year three is going to collapse.*
+You can trade away a first-round pick for a player on a max contract with two years left and the game will let you do it without blinking (especially with trade override). There's no mechanism that tells you: *this is an overpay, 28 out of 30 real GMs would reject this, and your cap situation in year three is going to collapse.*
 
 The gap: **franchise players want to feel like real GMs, but the game doesn't simulate the accountability that real GMs face.**
 
@@ -14,10 +14,10 @@ The gap: **franchise players want to feel like real GMs, but the game doesn't si
 
 Real GMs operate inside a system of accountability that the game ignores:
 
-- **Media pressure** — every move gets publicly graded by journalists within hours
-- **Org alignment** — ownership, coaches, and franchise legends all have opinions
-- **League perception** — your reputation among other GMs affects future deals
-- **Cap reality** — the financial logic of every move is scrutinized in public
+* **Media pressure** — every move gets publicly graded by journalists within hours
+* **Org alignment** — ownership, coaches, and franchise legends all have opinions
+* **League perception** — your reputation among other GMs affects future deals
+* **Cap reality** — the financial logic of every move is scrutinized in public
 
 The insight was that AI could simulate all four of those accountability mechanisms simultaneously — and do it in plain English, the same way a player would actually think about a move.
 
@@ -25,13 +25,13 @@ The insight was that AI could simulate all four of those accountability mechanis
 
 ## The Solution
 
-The 2k2k GM grader tool takes free-text notes and returns structured accountability:
+The 2K26 GM grader tool takes free-text notes and returns structured accountability:
 
 1. **Realism grade** — would this trade actually happen in the real NBA?
 2. **GM decision grade** — is this smart for your franchise?
 3. **Insider reactions** — reactions from a randomized pool of real journalists, both team-beat and league-wide
 4. **Cap implications** — the financial logic, not just the headline
-5. **Org consultation** — consult your own franchise's own legends and executives weighing in before you pull the trigger
+5. **Org consultation** — consult your own franchise's legends and executives weighing in before you pull the trigger
 
 The key UX decision was **free text input**. No dropdowns, no forms, no structured fields. You write exactly how you'd describe the move to a friend. The AI figures out the rest.
 
@@ -40,9 +40,10 @@ The key UX decision was **free text input**. No dropdowns, no forms, no structur
 ## Target User
 
 A MyLeague / franchise mode player who:
-- Takes the GM simulation seriously, not just the on-court game
-- Has opinions about real NBA transactions and wants to apply that lens to their game
-- Wants the *feeling* of running a real front office, not just clicking through menus
+
+* Takes the GM simulation seriously, not just the on-court game
+* Has opinions about real NBA transactions and wants to apply that lens to their game
+* Wants the *feeling* of running a real front office, not just clicking through menus
 
 This is not for casual players. It's the person who spends 45 minutes in the trade negotiation screen, reads cap analysis, and has a genuine opinion about whether a deal makes sense.
 
@@ -57,7 +58,7 @@ The alternative was a form: pick move type, enter player names, select contract 
 Early versions graded almost everything A or B. That made the tool useless — if every move is good, there's no accountability. The final prompt explicitly calibrates: most moves are B or C, A-range is reserved for genuinely franchise-altering decisions. The grade has to mean something.
 
 **Rumors as context, not decoration**
-The Rumors tab could have been a note-taking feature. Instead, rumors actively feed into the next move analysis — insiders react to the war room intel, not just the move in isolation. This mirrors how real NBA transactions are processed: always in the context of what's already circulating.
+The Rumors tab actively feed into the next move analysis — insiders react to the war room intel, not just the move in isolation. This mirrors how real NBA transactions are processed: always in the context of what's already circulating. Resolved rumors are archived and excluded from future analysis — preventing outdated intel from contaminating new move grading.
 
 **Consult before vs. Grade after**
 Two separate modes for two separate moments in the decision process. Consult (before) is about getting org buy-in on a proposed move. Grade (after) is about accountability once it's done. Keeping them separate mirrors how real front offices actually work.
@@ -66,7 +67,7 @@ Two separate modes for two separate moments in the decision process. Consult (be
 A technical decision with a product rationale. Claude's natural language (apostrophes, em dashes) kept breaking JSON parsing, making the Consult feature unreliable. Switched to ###VOICE: / ###QUOTE: delimiters — structurally immune to punctuation. The product lesson: format your AI outputs around the failure modes of the medium, not the ideal case.
 
 **Sync code as save file**
-The storage limitation (window.storage resets per URL) could have been a dealbreaker. Instead it became a feature framing: each sync code is a separate save file, one per team. Multiple sync codes = multiple franchise runs you can jump between. The constraint became part of the product logic.
+The storage limitation (window.storage resets per URL) could have been a dealbreaker. Instead it became a feature framing: each sync code is a separate save file, one per team. Multiple sync codes = multiple franchise runs you can jump between. The sync code now carries team identity — pasting a code auto-selects your franchise, no re-selection needed. The constraint became part of the product logic.
 
 **30-team org voice pools**
 We started with a Bulls-specific version (which was functional) but it limits the audience to Bulls fans like me. Expanding to all 30 teams required curating 10-12 historically significant figures per franchise — front office builders, championship coaches, and franchise legends — with enough specificity that the voices feel authentic, not generic.
@@ -76,18 +77,21 @@ We started with a Bulls-specific version (which was functional) but it limits th
 ## What This Project Demonstrates
 
 **Product thinking:**
-- Identifying a real gap in an existing product (franchise mode feedback loop)
-- Designing around user mental models (free text, not forms)
-- Turning technical constraints into product features (sync code as save file)
-- Calibrating AI output to be useful, not just impressive (strict grading rubric)
+
+* Identifying a real gap in an existing product (franchise mode feedback loop)
+* Designing around user mental models (free text, not forms)
+* Turning technical constraints into product features (sync code as save file)
+* Calibrating AI output to be useful, not just impressive (strict grading rubric)
 
 **AI-assisted development:**
-- Complete application built through natural language prompting
-- Debugging complex issues (JSON parse failures, iframe sandboxing, React hook ordering) without writing code manually
-- Iterating on prompt design to get reliable, analytically grounded outputs
-- Recognizing when AI output format needs to change vs. when parsing needs to improve
+
+* Complete application built through natural language prompting
+* Debugging complex issues (JSON parse failures, iframe sandboxing, React hook ordering) without writing code manually
+* Iterating on prompt design to get reliable, analytically grounded outputs
+* Recognizing when AI output format needs to change vs. when parsing needs to improve
 
 **Judgment calls:**
-- When to use JSON vs. delimiters based on output reliability
-- When to simplify UX (two options, not three) based on actual user behavior
-- When a technical limitation is actually a product opportunity
+
+* When to use JSON vs. delimiters based on output reliability
+* When to simplify UX (two options, not three) based on actual user behavior
+* When a technical limitation is actually a product opportunity
